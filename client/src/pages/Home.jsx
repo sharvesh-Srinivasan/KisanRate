@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Navbar from "../components/Navbar";
 import StatsBanner from "../components/StatsBanner";
 import FilterBar from "../components/FilterBar";
@@ -7,6 +7,47 @@ import PriceChart from "../components/PriceChart";
 import WhatsAppCTA from "../components/WhatsAppCTA";
 import { getPrices, getCrops, getMandis, getPriceHistory } from "../api";
 import socket from "../socket";
+
+const TAMIL_NADU_DISTRICTS = [
+  "Ariyalur",
+  "Chengalpattu",
+  "Chennai",
+  "Coimbatore",
+  "Cuddalore",
+  "Dharmapuri",
+  "Dindigul",
+  "Erode",
+  "Kallakurichi",
+  "Kanchipuram",
+  "Kanyakumari",
+  "Karur",
+  "Krishnagiri",
+  "Madurai",
+  "Mayiladuthurai",
+  "Nagapattinam",
+  "Namakkal",
+  "Nilgiris",
+  "Perambalur",
+  "Pudukkottai",
+  "Ramanathapuram",
+  "Ranipet",
+  "Salem",
+  "Sivaganga",
+  "Tenkasi",
+  "Thanjavur",
+  "Theni",
+  "Thoothukudi",
+  "Tiruchirappalli",
+  "Tirunelveli",
+  "Tirupattur",
+  "Tiruppur",
+  "Tiruvallur",
+  "Tiruvannamalai",
+  "Tiruvarur",
+  "Vellore",
+  "Viluppuram",
+  "Virudhunagar"
+];
 
 // Props: { loading?: boolean, error?: string | null }
 const Home = ({ loading = false, error = null }) => {
@@ -26,46 +67,6 @@ const Home = ({ loading = false, error = null }) => {
     "Maize",
     "Groundnut",
     "Chilli"
-  ];
-  const tamilNaduDistricts = [
-    "Ariyalur",
-    "Chengalpattu",
-    "Chennai",
-    "Coimbatore",
-    "Cuddalore",
-    "Dharmapuri",
-    "Dindigul",
-    "Erode",
-    "Kallakurichi",
-    "Kanchipuram",
-    "Kanyakumari",
-    "Karur",
-    "Krishnagiri",
-    "Madurai",
-    "Mayiladuthurai",
-    "Nagapattinam",
-    "Namakkal",
-    "Nilgiris",
-    "Perambalur",
-    "Pudukkottai",
-    "Ramanathapuram",
-    "Ranipet",
-    "Salem",
-    "Sivaganga",
-    "Tenkasi",
-    "Thanjavur",
-    "Theni",
-    "Thoothukudi",
-    "Tiruchirappalli",
-    "Tirunelveli",
-    "Tirupattur",
-    "Tiruppur",
-    "Tiruvallur",
-    "Tiruvannamalai",
-    "Tiruvarur",
-    "Vellore",
-    "Viluppuram",
-    "Virudhunagar"
   ];
   const [prices, setPrices] = useState([]);
   const [crops, setCrops] = useState([]);
@@ -92,8 +93,8 @@ const Home = ({ loading = false, error = null }) => {
       return fromMandis;
     }
 
-    return tamilNaduDistricts;
-  }, [mandis, tamilNaduDistricts]);
+    return TAMIL_NADU_DISTRICTS;
+  }, [mandis]);
 
   const stats = {
     crops: crops.length,
@@ -111,20 +112,23 @@ const Home = ({ loading = false, error = null }) => {
     }
   };
 
-  const fetchPrices = async (silent = false) => {
-    if (!silent) {
-      setLoadingPrices(true);
-    }
-    setErrorPrices("");
-    try {
-      const response = await getPrices(filters);
-      setPrices(response.data || []);
-    } catch (err) {
-      setErrorPrices("Failed to load prices.");
-    } finally {
-      setLoadingPrices(false);
-    }
-  };
+  const fetchPrices = useCallback(
+    async (silent = false) => {
+      if (!silent) {
+        setLoadingPrices(true);
+      }
+      setErrorPrices("");
+      try {
+        const response = await getPrices(filters);
+        setPrices(response.data || []);
+      } catch (err) {
+        setErrorPrices("Failed to load prices.");
+      } finally {
+        setLoadingPrices(false);
+      }
+    },
+    [filters]
+  );
 
   useEffect(() => {
     fetchBaseData();
@@ -132,7 +136,7 @@ const Home = ({ loading = false, error = null }) => {
 
   useEffect(() => {
     fetchPrices();
-  }, [filters]);
+  }, [fetchPrices]);
 
   useEffect(() => {
     socket.on("prices_updated", async () => {
@@ -145,7 +149,7 @@ const Home = ({ loading = false, error = null }) => {
     return () => {
       socket.off("prices_updated");
     };
-  }, [filters]);
+  }, [fetchPrices]);
 
   const handleCardClick = async (price) => {
     setSelectedCard(price);

@@ -1,0 +1,21 @@
+const express = require("express");
+const rateLimit = require("express-rate-limit");
+const {
+  whatsappWebhook,
+  getWhatsappLogs
+} = require("../controllers/whatsappController");
+const { authenticate } = require("../middleware/authMiddleware");
+
+const router = express.Router();
+
+const webhookLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+router.post("/webhook", webhookLimiter, whatsappWebhook);
+router.get("/logs", authenticate, getWhatsappLogs);
+
+module.exports = router;

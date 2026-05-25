@@ -1,4 +1,5 @@
 # KisanRate
+<<<<<<< HEAD
 
 KisanRate is a hyperlocal crop price discovery and prediction platform for farmers in India. Farmers can query prices via WhatsApp, while the public can view live mandi prices on a web dashboard.
 
@@ -46,3 +47,6 @@ Copy .env.example and populate values for client, server, and ml. Use the same D
 ## Notes
 - All DB queries use parameterized placeholders
 - WhatsApp webhook is rate-limited to 20 requests/minute per IP
+=======
+A smart price analysis app for farmers to sell the crops directly 
+>>>>>>> bb37c45e87586d34af786a399909214823087e93

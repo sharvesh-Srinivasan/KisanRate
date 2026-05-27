@@ -36,7 +36,7 @@ const PriceChart = ({
   }));
 
   return (
-    <div className="bg-white border border-border rounded-xl p-6 shadow-card">
+    <div className="bg-white/90 border border-border/70 rounded-2xl p-6 shadow-card">
       <div className="font-display text-lg text-text-main mb-2">
         {cropName} at {mandiName} — last 30 days
       </div>

@@ -13,8 +13,8 @@ const WhatsAppCTA = ({ loading = false, error = null }) => {
   }
 
   return (
-    <section className="w-full bg-gradient-to-r from-primary to-primary-light py-16 px-6 text-center">
-      <div className="max-w-3xl mx-auto">
+    <section className="w-full cta-surface py-16 px-6 text-center">
+      <div className="max-w-4xl mx-auto">
         <svg
           width="80"
           height="80"
@@ -50,20 +50,24 @@ const WhatsAppCTA = ({ loading = false, error = null }) => {
           />
         </svg>
 
-        <h2 className="font-display text-3xl text-white font-bold">
+        <h2 className="font-display text-3xl md:text-4xl text-white font-bold">
           Get prices on WhatsApp
         </h2>
-        <p className="text-white/80 mt-2">
-          No app download needed. Just send a message.
+        <p className="text-white/80 mt-3 text-base md:text-lg">
+          No app download needed. Just send a message and get instant mandi prices.
         </p>
-        <button
-          type="button"
-          className="bg-white text-primary font-semibold rounded-xl px-8 py-4 mt-8 hover:bg-accent-light transition inline-flex items-center gap-2"
-        >
-          <MessageCircle size={18} />
-          Chat on WhatsApp
-        </button>
-        <div className="text-white/60 text-sm mt-3">Send "HI" to +91-XXXXXXXXXX</div>
+        <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
+          <button
+            type="button"
+            className="bg-white text-primary font-semibold rounded-xl px-8 py-4 hover:bg-accent-light transition inline-flex items-center justify-center gap-2"
+          >
+            <MessageCircle size={18} />
+            Chat on WhatsApp
+          </button>
+          <div className="text-white/70 text-sm self-center">
+            Send "HI" to +91-XXXXXXXXXX
+          </div>
+        </div>
       </div>
     </section>
   );

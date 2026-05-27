@@ -43,7 +43,7 @@ def fetch_price_history(crop_name: str, mandi_name: str):
 def predict_price(crop_name: str, mandi_name: str):
     rows = fetch_price_history(crop_name, mandi_name)
     if not rows:
-        return 0.0
+        return 0.0, 0.0, 0.0
 
     prices = [float(row["modal_price"]) for row in rows]
     average = float(np.mean(prices))

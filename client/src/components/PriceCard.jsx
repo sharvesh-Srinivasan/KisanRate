@@ -35,7 +35,7 @@ const PriceCard = ({
     <button
       type="button"
       onClick={onClick}
-      className="bg-white border border-border rounded-xl p-6 shadow-card text-left cursor-pointer hover:shadow-md transition-shadow duration-200"
+      className="bg-white/90 border border-border/70 rounded-2xl p-6 shadow-card text-left cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
     >
       <div className="font-display text-xl text-text-main">{crop}</div>
       <div className="text-sm text-text-muted">
@@ -49,11 +49,11 @@ const PriceCard = ({
         <div className="text-sm text-text-muted">/Quintal</div>
       </div>
 
-      <div className="flex items-center gap-2 mt-3">
-        <span className="bg-accent-light text-soil text-xs rounded-full px-2 py-0.5">
+      <div className="flex items-center gap-2 mt-3 flex-wrap">
+        <span className="bg-accent-light text-soil text-xs rounded-full px-2.5 py-1">
           Min Rs {Number(min_price).toLocaleString("en-IN")}
         </span>
-        <span className="bg-accent-light text-soil text-xs rounded-full px-2 py-0.5">
+        <span className="bg-accent-light text-soil text-xs rounded-full px-2.5 py-1">
           Max Rs {Number(max_price).toLocaleString("en-IN")}
         </span>
       </div>

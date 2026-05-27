@@ -1,8 +1,9 @@
 import { Leaf } from "lucide-react";
 
-// Props: { filters: { state: string, district: string, crop: string }, districts: string[], crops: string[], onFilterChange: (nextFilters) => void, loading?: boolean, error?: string | null }
+// Props: { filters: { state: string, district: string, crop: string }, states: string[], districts: string[], crops: string[], onFilterChange: (nextFilters) => void, loading?: boolean, error?: string | null }
 const FilterBar = ({
   filters,
+  states,
   districts,
   crops,
   onFilterChange,
@@ -24,7 +25,7 @@ const FilterBar = ({
   }
 
   return (
-    <div className="bg-white border-b border-border px-6 py-4">
+    <div className="px-6 py-5">
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center gap-4">
         <div className="flex items-center gap-2 text-text-muted text-sm">
           <Leaf size={16} className="text-primary" />
@@ -32,7 +33,24 @@ const FilterBar = ({
         </div>
         <div className="flex flex-col md:flex-row gap-3 flex-1">
           <select
-            className="border border-border rounded-lg px-4 py-2.5 bg-white focus:ring-2 focus:ring-primary/30 focus:outline-none"
+            className="border border-border/70 rounded-xl px-4 py-3 bg-white/90 focus:ring-2 focus:ring-primary/30 focus:outline-none shadow-sm"
+            value={filters.state}
+            onChange={(event) =>
+              onFilterChange({
+                ...filters,
+                state: event.target.value,
+                district: ""
+              })
+            }
+          >
+            {states.map((state) => (
+              <option key={state} value={state}>
+                {state}
+              </option>
+            ))}
+          </select>
+          <select
+            className="border border-border/70 rounded-xl px-4 py-3 bg-white/90 focus:ring-2 focus:ring-primary/30 focus:outline-none shadow-sm"
             value={filters.district}
             onChange={(event) =>
               onFilterChange({ ...filters, district: event.target.value })
@@ -46,7 +64,7 @@ const FilterBar = ({
             ))}
           </select>
           <select
-            className="border border-border rounded-lg px-4 py-2.5 bg-white focus:ring-2 focus:ring-primary/30 focus:outline-none"
+            className="border border-border/70 rounded-xl px-4 py-3 bg-white/90 focus:ring-2 focus:ring-primary/30 focus:outline-none shadow-sm"
             value={filters.crop}
             onChange={(event) =>
               onFilterChange({ ...filters, crop: event.target.value })

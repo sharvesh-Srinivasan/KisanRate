@@ -5,7 +5,8 @@ const {
   getCrops,
   getMandis,
   manualPriceAdd,
-  refreshPredictions
+  refreshPredictions,
+  predictTodayForState
 } = require("../controllers/priceController");
 const { authenticate } = require("../middleware/authMiddleware");
 
@@ -17,5 +18,6 @@ router.get("/crops", getCrops);
 router.get("/mandis", getMandis);
 router.post("/manual", authenticate, manualPriceAdd);
 router.post("/refresh-predictions", authenticate, refreshPredictions);
+router.post("/predict-now", predictTodayForState);
 
 module.exports = router;

@@ -6,12 +6,12 @@ import Admin from "./pages/Admin";
 // Props: { loading?: boolean, error?: string | null }
 const App = ({ loading = false, error = null }) => {
   if (loading) {
-    return <div className="min-h-screen bg-cream animate-pulse" />;
+    return <div className="min-h-screen app-shell animate-pulse" />;
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-cream flex items-center justify-center text-danger">
+      <div className="min-h-screen app-shell flex items-center justify-center text-danger">
         {error}
       </div>
     );

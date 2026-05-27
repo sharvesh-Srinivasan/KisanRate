@@ -81,3 +81,8 @@ export const refreshPredictions = async () => {
   const response = await apiClient.post("/api/prices/refresh-predictions");
   return response.data;
 };
+
+export const predictTodayForState = async (state) => {
+  const response = await apiClient.post("/api/prices/predict-now", { state });
+  return response.data;
+};

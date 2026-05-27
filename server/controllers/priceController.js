@@ -260,6 +260,78 @@ const manualPriceAdd = async (req, res) => {
   }
 };
 
+const predictTodayForState = async (req, res) => {
+  try {
+    const { state } = req.body || {};
+    if (!state) {
+      return res.status(400).json({
+        success: false,
+        data: null,
+        message: "State is required"
+      });
+    }
+
+    const filters = [`%${state}%`];
+
+    const [latestRows] = await db.query(
+      `SELECT MAX(p.price_date) AS latest_date
+       FROM prices p
+       JOIN crops c ON p.crop_id = c.id
+       JOIN mandis m ON p.mandi_id = m.id
+       WHERE m.state LIKE ?`,
+      filters
+    );
+
+    const latestDate = latestRows[0]?.latest_date;
+    const whereClause = latestDate
+      ? "WHERE m.state LIKE ? AND p.price_date = ?"
+      : "WHERE m.state LIKE ? AND p.price_date = CURDATE()";
+
+    if (latestDate) {
+      filters.push(latestDate);
+    }
+
+    const [rows] = await db.query(
+      `SELECT p.id, c.name AS crop_name, m.name AS mandi_name
+       FROM prices p
+       JOIN crops c ON p.crop_id = c.id
+       JOIN mandis m ON p.mandi_id = m.id
+       ${whereClause}`,
+      filters
+    );
+
+    let updated = 0;
+    for (const row of rows) {
+      const predicted = await getPrediction(row.crop_name, row.mandi_name);
+      if (predicted && typeof predicted.predicted_price === "number") {
+        await db.query(
+          "UPDATE prices SET predicted_price = ?, predicted_lower = ?, predicted_upper = ?, predicted_at = NOW() WHERE id = ?",
+          [
+            predicted.predicted_price,
+            predicted.predicted_lower ?? predicted.predicted_price,
+            predicted.predicted_upper ?? predicted.predicted_price,
+            row.id
+          ]
+        );
+        updated += 1;
+      }
+    }
+
+    return res.json({
+      success: true,
+      data: { updated, state, price_date: latestDate || null },
+      message: "Predictions updated"
+    });
+  } catch (error) {
+    logWarn(`Predict today failed: ${error.message}`);
+    return res.status(500).json({
+      success: false,
+      data: null,
+      message: "Failed to run predictions"
+    });
+  }
+};
+
 const refreshPredictions = async (req, res) => {
   try {
     const [rows] = await db.query(
@@ -273,10 +345,15 @@ const refreshPredictions = async (req, res) => {
     let updated = 0;
     for (const row of rows) {
       const predicted = await getPrediction(row.crop_name, row.mandi_name);
-      if (typeof predicted === "number") {
+      if (predicted && typeof predicted.predicted_price === "number") {
         await db.query(
-          "UPDATE prices SET predicted_price = ?, predicted_at = NOW() WHERE id = ?",
-          [predicted, row.id]
+          "UPDATE prices SET predicted_price = ?, predicted_lower = ?, predicted_upper = ?, predicted_at = NOW() WHERE id = ?",
+          [
+            predicted.predicted_price,
+            predicted.predicted_lower ?? predicted.predicted_price,
+            predicted.predicted_upper ?? predicted.predicted_price,
+            row.id
+          ]
         );
         updated += 1;
       }
@@ -303,5 +380,6 @@ module.exports = {
   getCrops,
   getMandis,
   manualPriceAdd,
-  refreshPredictions
+  refreshPredictions,
+  predictTodayForState
 };

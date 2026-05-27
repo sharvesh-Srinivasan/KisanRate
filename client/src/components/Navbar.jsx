@@ -20,7 +20,7 @@ const Navbar = ({ loading = false, error = null }) => {
   }
 
   return (
-    <nav className="fixed top-0 inset-x-0 h-16 bg-white border-b border-border z-50">
+    <nav className="fixed top-0 inset-x-0 h-16 bg-white/80 backdrop-blur border-b border-border/70 z-50">
       <div className="max-w-6xl mx-auto h-full flex items-center justify-between px-6">
         <div className="flex items-center gap-3">
           <svg
@@ -83,7 +83,7 @@ const Navbar = ({ loading = false, error = null }) => {
       </div>
 
       {open && (
-        <div className="md:hidden bg-white border-t border-border px-6 py-4 space-y-3 text-text-muted">
+        <div className="md:hidden bg-white/90 backdrop-blur border-t border-border/70 px-6 py-4 space-y-3 text-text-muted">
           <a className="block hover:text-primary transition" href="#prices">
             Prices
           </a>

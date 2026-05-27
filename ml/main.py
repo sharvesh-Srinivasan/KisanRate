@@ -23,6 +23,11 @@ def health():
     return {"status": "ok"}
 
 
+@app.get("/")
+def root():
+    return {"status": "ok"}
+
+
 @app.post("/predict")
 def predict(request: PredictionRequest):
     predicted_price, lower, upper = predict_price(request.crop, request.mandi)

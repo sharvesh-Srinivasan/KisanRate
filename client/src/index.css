@@ -5,3 +5,33 @@
 body {
   @apply bg-cream text-text-main font-sans;
 }
+
+.app-shell {
+  background-color: #fdfaf5;
+  background-image: radial-gradient(1200px 500px at 12% -8%, rgba(90, 146, 72, 0.14), transparent 70%),
+    radial-gradient(900px 520px at 88% 8%, rgba(193, 127, 58, 0.12), transparent 65%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120' fill='none'%3E%3Cpath d='M0 60C20 40 40 80 60 60C80 40 100 80 120 60' stroke='%23E7DDCE' stroke-width='2' opacity='0.55'/%3E%3C/svg%3E");
+  background-size: 1200px 500px, 900px 520px, 160px 160px;
+  background-attachment: fixed, fixed, scroll;
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(212, 196, 174, 0.6);
+  box-shadow: 0 18px 40px rgba(44, 31, 14, 0.08);
+  backdrop-filter: blur(14px);
+}
+
+.hero-illustration {
+  background-image: linear-gradient(135deg, rgba(59, 110, 47, 0.1), rgba(193, 127, 58, 0.12)),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='260' viewBox='0 0 420 260' fill='none'%3E%3Cpath d='M0 200C60 170 120 230 180 200C240 170 300 230 360 200C390 190 405 185 420 180' stroke='%23C9B59D' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M30 150C70 120 120 170 160 150C200 130 250 170 290 150C330 130 360 160 400 145' stroke='%23D8C7B2' stroke-width='2' stroke-linecap='round'/%3E%3Ccircle cx='320' cy='70' r='28' fill='%23F2E4D2'/%3E%3Cpath d='M85 210C88 190 94 170 104 156' stroke='%2397B883' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M112 210C114 192 119 175 128 163' stroke='%2397B883' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-size: cover;
+  background-position: center;
+}
+
+.cta-surface {
+  background-image: linear-gradient(120deg, rgba(59, 110, 47, 0.95), rgba(90, 146, 72, 0.95), rgba(193, 127, 58, 0.88)),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='280' viewBox='0 0 280 280' fill='none'%3E%3Cpath d='M0 220C40 200 80 240 120 220C160 200 200 240 240 220C260 210 270 205 280 200' stroke='%23FFFFFF' stroke-opacity='0.18' stroke-width='2'/%3E%3Ccircle cx='210' cy='70' r='36' fill='%23FFFFFF' fill-opacity='0.12'/%3E%3C/svg%3E");
+  background-size: cover;
+  background-position: center;
+}

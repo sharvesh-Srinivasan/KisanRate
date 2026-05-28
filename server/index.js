@@ -54,6 +54,7 @@ const corsOptions = {
   origin: [
     "https://kisanrate.vercel.app",
     "https://kisan-rate.vercel.app",
+    "https://kisan-rate-pnkohcxin-sharvesh308-6407s-projects.vercel.app",
     "http://localhost:3000"
   ],
   credentials: true

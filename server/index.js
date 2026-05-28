@@ -50,13 +50,28 @@ const ensurePredictionColumns = async () => {
   }
 };
 
+const allowedOrigins = new Set([
+  "https://kisanrate.vercel.app",
+  "https://kisan-rate.vercel.app",
+  "http://localhost:3000"
+]);
+
 const corsOptions = {
-  origin: [
-    "https://kisanrate.vercel.app",
-    "https://kisan-rate.vercel.app",
-    "https://kisan-rate-pnkohcxin-sharvesh308-6407s-projects.vercel.app",
-    "http://localhost:3000"
-  ],
+  origin: (origin, callback) => {
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    if (allowedOrigins.has(origin)) {
+      return callback(null, true);
+    }
+
+    if (origin.endsWith(".vercel.app")) {
+      return callback(null, true);
+    }
+
+    return callback(new Error("Not allowed by CORS"));
+  },
   credentials: true
 };
 

@@ -51,7 +51,11 @@ const ensurePredictionColumns = async () => {
 };
 
 const corsOptions = {
-  origin: ["https://kisanrate.vercel.app", "http://localhost:3000"],
+  origin: [
+    "https://kisanrate.vercel.app",
+    "https://kisan-rate.vercel.app",
+    "http://localhost:3000"
+  ],
   credentials: true
 };
 

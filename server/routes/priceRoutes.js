@@ -16,7 +16,7 @@ router.get("/", getPrices);
 router.get("/history/:cropId/:mandiId", getPriceHistory);
 router.get("/crops", getCrops);
 router.get("/mandis", getMandis);
-router.post("/manual", manualPriceAdd);
+router.post("/manual", authenticate, manualPriceAdd);
 router.post("/refresh-predictions", authenticate, refreshPredictions);
 router.post("/predict-now", predictTodayForState);
 

@@ -1,6 +1,7 @@
 const { MessagingResponse } = require("twilio").twiml;
 const db = require("../config/db");
 const { getPrediction } = require("../services/mlService");
+const { sendWhatsAppMessage } = require("../services/twilioService");
 
 const timestamp = () => new Date().toISOString();
 const logWarn = (message) => {
@@ -210,4 +211,53 @@ const getWhatsappLogs = async (req, res) => {
   }
 };
 
-module.exports = { whatsappWebhook, getWhatsappLogs };
+const testSendWhatsApp = async (req, res) => {
+  try {
+    const secret = process.env.WHATSAPP_TEST_SECRET;
+    if (secret) {
+      const provided =
+        req.headers["x-whatsapp-test-secret"] || req.query.secret;
+      if (provided !== secret) {
+        return res.status(401).json({
+          success: false,
+          data: null,
+          message: "Unauthorized"
+        });
+      }
+    }
+
+    const { to, message } = req.body || {};
+    if (!to) {
+      return res.status(400).json({
+        success: false,
+        data: null,
+        message: "Recipient phone number is required"
+      });
+    }
+
+    const body = message || "KisanRate WhatsApp test message.";
+    const result = await sendWhatsAppMessage(to, body);
+    if (!result) {
+      return res.status(500).json({
+        success: false,
+        data: null,
+        message: "WhatsApp send failed"
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: { sid: result.sid },
+      message: "WhatsApp message sent"
+    });
+  } catch (error) {
+    logWarn(`WhatsApp test send failed: ${error.message}`);
+    return res.status(500).json({
+      success: false,
+      data: null,
+      message: "WhatsApp test send failed"
+    });
+  }
+};
+
+module.exports = { whatsappWebhook, getWhatsappLogs, testSendWhatsApp };

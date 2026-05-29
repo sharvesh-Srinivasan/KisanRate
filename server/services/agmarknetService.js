@@ -14,6 +14,9 @@ const parseStates = (raw) =>
     .map((state) => state.trim())
     .filter(Boolean);
 
+const MAX_PAGES = 10;
+const PAGE_LIMIT = 1000;
+
 const fetchAgmarknetPrices = async () => {
   try {
     if (!process.env.AGMARKNET_API_KEY) {
@@ -23,21 +26,27 @@ const fetchAgmarknetPrices = async () => {
 
     const states = parseStates(process.env.AGMARKNET_STATES) || [];
     const targetStates = states.length ? states : ["Tamil Nadu"];
-    const requests = targetStates.map((state) =>
-      axios.get(AGMARKNET_URL, {
-        params: {
-          "api-key": process.env.AGMARKNET_API_KEY,
-          format: "json",
-          "filters[state]": state,
-          limit: 100
-        }
-      })
+    const requests = targetStates.flatMap((state) =>
+      Array.from({ length: MAX_PAGES }, (_, page) =>
+        axios.get(AGMARKNET_URL, {
+          params: {
+            "api-key": process.env.AGMARKNET_API_KEY,
+            format: "json",
+            "filters[state]": state,
+            limit: PAGE_LIMIT,
+            offset: page * PAGE_LIMIT
+          }
+        })
+      )
     );
 
     const responses = await Promise.allSettled(requests);
-    const records = responses.flatMap((result) =>
-      result.status === "fulfilled" ? result.value?.data?.records || [] : []
-    );
+    const records = responses.flatMap((result) => {
+      if (result.status !== "fulfilled") {
+        return [];
+      }
+      return result.value?.data?.records || [];
+    });
 
     return records.map((record) => ({
       crop: record.commodity || "",

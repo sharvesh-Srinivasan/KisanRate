@@ -62,6 +62,56 @@ const updateFarmer = async (req, res) => {
   }
 };
 
+const normalizePhone = (phone) =>
+  String(phone || "")
+    .replace(/\D/g, "")
+    .replace(/^91/, "");
+
+const subscribeFarmer = async (req, res) => {
+  try {
+    const { phone, name, preferred_crop_id, preferred_mandi_id } = req.body || {};
+    const normalized = normalizePhone(phone);
+
+    if (!normalized || !preferred_crop_id || !preferred_mandi_id) {
+      return res.status(400).json({
+        success: false,
+        data: null,
+        message: "Phone, crop, and mandi are required"
+      });
+    }
+
+    const [existing] = await db.query(
+      "SELECT id FROM farmers WHERE phone = ? LIMIT 1",
+      [normalized]
+    );
+
+    if (existing.length) {
+      await db.query(
+        "UPDATE farmers SET name = COALESCE(?, name), preferred_crop_id = ?, preferred_mandi_id = ?, subscribed = TRUE WHERE phone = ?",
+        [name || null, preferred_crop_id, preferred_mandi_id, normalized]
+      );
+    } else {
+      await db.query(
+        "INSERT INTO farmers (phone, name, preferred_crop_id, preferred_mandi_id, subscribed) VALUES (?, ?, ?, ?, TRUE)",
+        [normalized, name || null, preferred_crop_id, preferred_mandi_id]
+      );
+    }
+
+    return res.json({
+      success: true,
+      data: null,
+      message: "Subscription saved"
+    });
+  } catch (error) {
+    logWarn(`Subscribe farmer failed: ${error.message}`);
+    return res.status(500).json({
+      success: false,
+      data: null,
+      message: "Failed to subscribe"
+    });
+  }
+};
+
 const deleteFarmer = async (req, res) => {
   try {
     const { id } = req.params;
@@ -82,4 +132,4 @@ const deleteFarmer = async (req, res) => {
   }
 };
 
-module.exports = { listFarmers, updateFarmer, deleteFarmer };
+module.exports = { listFarmers, updateFarmer, deleteFarmer, subscribeFarmer };

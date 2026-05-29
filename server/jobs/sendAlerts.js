@@ -57,7 +57,7 @@ const sendAlertsNow = async () => {
 };
 
 const startSendAlertsJob = () => {
-  cron.schedule("0 7 * * *", sendAlertsNow);
+  cron.schedule("0 7 * * *", sendAlertsNow, { timezone: "Asia/Kolkata" });
 };
 
 module.exports = { startSendAlertsJob, sendAlertsNow };

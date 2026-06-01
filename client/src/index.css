@@ -40,6 +40,21 @@ html {
   background-position: center;
 }
 
+.whatsapp-hero-card {
+  position: relative;
+}
+
+.whatsapp-hero-card::after {
+  content: "";
+  position: absolute;
+  inset: auto -12% -45% auto;
+  width: 240px;
+  height: 240px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(37, 211, 102, 0.14), transparent 68%);
+  pointer-events: none;
+}
+
 .whatsapp-logo-badge {
   width: 72px;
   height: 72px;
@@ -52,6 +67,12 @@ html {
   border: 1px solid rgba(255, 255, 255, 0.25);
   transform: translateZ(0);
   transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.whatsapp-logo-badge--small {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
 }
 
 .whatsapp-logo-badge svg {
@@ -218,32 +239,4 @@ html {
   font-size: 12px;
   color: #6b5a45;
   line-height: 1.5;
-}
-
-.whatsapp-fab {
-  position: fixed;
-  right: 24px;
-  bottom: 24px;
-  z-index: 50;
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: #25d366;
-  color: #ffffff;
-  box-shadow: 0 18px 30px rgba(10, 45, 20, 0.3);
-  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
-}
-
-.whatsapp-fab:hover {
-  transform: translateY(-2px);
-  background: #1fb85a;
-  box-shadow: 0 22px 34px rgba(10, 45, 20, 0.35);
-}
-
-.whatsapp-fab:focus-visible {
-  outline: 2px solid rgba(255, 255, 255, 0.6);
-  outline-offset: 4px;
 }

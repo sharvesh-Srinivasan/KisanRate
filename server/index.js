@@ -50,6 +50,20 @@ const ensurePredictionColumns = async () => {
   }
 };
 
+const ensureWhatsAppSessionsTable = async () => {
+  await db.query(
+    `CREATE TABLE IF NOT EXISTS whatsapp_sessions (
+      phone VARCHAR(20) PRIMARY KEY,
+      step VARCHAR(40) NOT NULL,
+      intent VARCHAR(20) NOT NULL,
+      crop_name VARCHAR(100),
+      district_name VARCHAR(100),
+      city_name VARCHAR(100),
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )`
+  );
+};
+
 const allowedOrigins = new Set([
   "https://kisanrate.vercel.app",
   "https://kisan-rate.vercel.app",
@@ -145,6 +159,10 @@ startSendAlertsJob();
 
 ensurePredictionColumns().catch((error) => {
   logWarn(`Prediction cache setup failed: ${error.message}`);
+});
+
+ensureWhatsAppSessionsTable().catch((error) => {
+  logWarn(`WhatsApp session setup failed: ${error.message}`);
 });
 
 const keepAliveTargets = [

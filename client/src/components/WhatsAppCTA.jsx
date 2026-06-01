@@ -18,6 +18,7 @@ const WhatsAppCTA = ({
   });
   const [status, setStatus] = useState("");
   const [sending, setSending] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
 
   const resolvedSandboxNumber =
     sandboxNumber || process.env.REACT_APP_WHATSAPP_SANDBOX_NUMBER || "+14155238886";
@@ -130,23 +131,80 @@ const WhatsAppCTA = ({
             </span>
             Chat on WhatsApp
           </a>
-          <div className="text-white/70 text-sm"> 
-            Or send "HI" to <strong className="text-white">{resolvedSandboxNumber}</strong>
-          </div>
-          {resolvedJoinCode ? (
-            <div className="text-white/80 text-sm flex items-center gap-2">
-              <span>Join code:</span>
-              <code className="bg-white/10 px-2 py-1 rounded">{resolvedJoinCode}</code>
-              <button
-                type="button"
-                onClick={() => handleCopy(resolvedJoinCode)}
-                className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition"
-              >
-                Copy
-              </button>
-            </div>
-          ) : null}
+          <button
+            type="button"
+            onClick={() => setShowDetails(true)}
+            className="whatsapp-info-button"
+          >
+            View WhatsApp details
+          </button>
         </div>
+
+        {showDetails && (
+          <div
+            className="whatsapp-modal-backdrop"
+            onClick={() => setShowDetails(false)}
+            role="presentation"
+          >
+            <div
+              className="whatsapp-modal-card"
+              role="dialog"
+              aria-modal="true"
+              aria-label="WhatsApp details"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="whatsapp-modal-header">
+                <div>
+                  <div className="text-xs uppercase tracking-[0.3em] text-emerald-700">
+                    WhatsApp details
+                  </div>
+                  <div className="text-lg font-semibold text-text-main">
+                    Send a quick message to join updates
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="whatsapp-modal-close"
+                  onClick={() => setShowDetails(false)}
+                  aria-label="Close WhatsApp details"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="whatsapp-modal-body">
+                <div className="whatsapp-detail-row">
+                  <div className="text-sm text-text-muted">Sandbox number</div>
+                  <div className="text-base font-semibold text-text-main">
+                    {resolvedSandboxNumber}
+                  </div>
+                </div>
+                <div className="whatsapp-detail-row">
+                  <div className="text-sm text-text-muted">Message to send</div>
+                  <div className="text-base font-semibold text-text-main">HI</div>
+                </div>
+                {resolvedJoinCode ? (
+                  <div className="whatsapp-detail-row">
+                    <div className="text-sm text-text-muted">Join code</div>
+                    <div className="flex items-center gap-2">
+                      <code className="whatsapp-code-chip">{resolvedJoinCode}</code>
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(resolvedJoinCode)}
+                        className="whatsapp-copy-button"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+                <div className="whatsapp-detail-note">
+                  Sandbox users only. Make sure your number has joined the Twilio WhatsApp sandbox.
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="mt-10 bg-white/10 rounded-2xl p-6 text-left">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">

@@ -1,11 +1,18 @@
 import { io } from "socket.io-client";
 
-const socket = io(
-  process.env.REACT_APP_SOCKET_URL || "http://localhost:4000",
-  {
-  transports: ["websocket"],
-  withCredentials: true
-  }
-);
+const socketUrl = process.env.REACT_APP_SOCKET_URL;
+
+const socket = socketUrl
+  ? io(socketUrl, {
+      transports: ["websocket"],
+      withCredentials: true
+    })
+  : {
+      on: () => {},
+      off: () => {},
+      emit: () => {},
+      connect: () => {},
+      disconnect: () => {}
+    };
 
 export default socket;

@@ -62,18 +62,6 @@ const Home = ({ loading = false, error = null }) => {
     district: "",
     crop: ""
   });
-  const fallbackCrops = [
-    "Tomato",
-    "Onion",
-    "Potato",
-    "Rice",
-    "Wheat",
-    "Cotton",
-    "Sugarcane",
-    "Maize",
-    "Groundnut",
-    "Chilli"
-  ];
   const [prices, setPrices] = useState([]);
   const [crops, setCrops] = useState([]);
   const [mandis, setMandis] = useState([]);
@@ -86,6 +74,13 @@ const Home = ({ loading = false, error = null }) => {
   const [toast, setToast] = useState({ show: false, fade: false });
   const [predictionStatus, setPredictionStatus] = useState("");
   const [predictionLoading, setPredictionLoading] = useState(false);
+
+  const whatsappSandboxNumber =
+    process.env.REACT_APP_WHATSAPP_SANDBOX_NUMBER || "+14155238886";
+  const whatsappJoinCode =
+    process.env.REACT_APP_WHATSAPP_JOIN_CODE || "";
+
+  const fallbackCrops = [];
 
   const chartRef = useRef(null);
 
@@ -310,6 +305,15 @@ const Home = ({ loading = false, error = null }) => {
           </div>
         </header>
 
+        <WhatsAppCTA
+          loading={loadingPrices}
+          error={errorPrices}
+          crops={crops}
+          mandis={mandis}
+          sandboxNumber={whatsappSandboxNumber}
+          joinCode={whatsappJoinCode}
+        />
+
         <section className="max-w-6xl mx-auto px-6 mt-8">
           <div className="glass-panel rounded-2xl">
             <StatsBanner stats={stats} />
@@ -431,7 +435,6 @@ const Home = ({ loading = false, error = null }) => {
           )}
         </section>
 
-        <WhatsAppCTA />
       </div>
 
       {toast.show && (

@@ -86,3 +86,8 @@ export const predictTodayForState = async (state) => {
   const response = await apiClient.post("/api/prices/predict-now", { state });
   return response.data;
 };
+
+export const subscribeWhatsapp = async (payload) => {
+  const response = await apiClient.post("/api/farmers/subscribe", payload);
+  return response.data;
+};

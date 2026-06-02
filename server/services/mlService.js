@@ -79,7 +79,8 @@ const getPrediction = async (cropName, mandiName) => {
 
     throw lastError;
   } catch (error) {
-    logWarn(`ML prediction failed: ${error.message}`);
+    const detail = error.response?.data?.detail || error.message;
+    logWarn(`ML prediction failed: ${detail}`);
     return null;
   }
 };

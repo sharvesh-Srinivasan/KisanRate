@@ -8,8 +8,12 @@ from prophet import Prophet
 
 
 def get_connection():
+    db_host = os.getenv("DB_HOST")
+    if not db_host or db_host.strip() == "":
+        raise ValueError("DB_HOST is missing! Please configure DB_HOST, DB_USER, DB_PASSWORD, DB_NAME in Render Environment Variables.")
+
     return mysql.connector.connect(
-        host=os.getenv("DB_HOST"),
+        host=db_host,
         user=os.getenv("DB_USER"),
         password=os.getenv("DB_PASSWORD"),
         database=os.getenv("DB_NAME"),

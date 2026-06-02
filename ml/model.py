@@ -69,7 +69,7 @@ def predict_price(crop_name: str, mandi_name: str):
     df["ds"] = pd.to_datetime(df["ds"])
 
     try:
-        model = Prophet(daily_seasonality=False, yearly_seasonality=False)
+        model = Prophet(daily_seasonality=False, yearly_seasonality=False, uncertainty_samples=50)
         model.fit(df)
 
         future = model.make_future_dataframe(periods=7)

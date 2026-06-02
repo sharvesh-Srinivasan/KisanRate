@@ -270,20 +270,26 @@ const predictTodayForState = async (req, res) => {
     );
 
     let updated = 0;
-    for (const row of rows) {
-      const predicted = await getPrediction(row.crop_name, row.mandi_name);
-      if (predicted && typeof predicted.predicted_price === "number") {
-        await db.query(
-          "UPDATE prices SET predicted_price = ?, predicted_lower = ?, predicted_upper = ?, predicted_at = NOW() WHERE id = ?",
-          [
-            predicted.predicted_price,
-            predicted.predicted_lower ?? predicted.predicted_price,
-            predicted.predicted_upper ?? predicted.predicted_price,
-            row.id
-          ]
-        );
-        updated += 1;
-      }
+    const batchSize = 3;
+    for (let i = 0; i < rows.length; i += batchSize) {
+      const chunk = rows.slice(i, i + batchSize);
+      await Promise.all(
+        chunk.map(async (row) => {
+          const predicted = await getPrediction(row.crop_name, row.mandi_name);
+          if (predicted && typeof predicted.predicted_price === "number") {
+            await db.query(
+              "UPDATE prices SET predicted_price = ?, predicted_lower = ?, predicted_upper = ?, predicted_at = NOW() WHERE id = ?",
+              [
+                predicted.predicted_price,
+                predicted.predicted_lower ?? predicted.predicted_price,
+                predicted.predicted_upper ?? predicted.predicted_price,
+                row.id
+              ]
+            );
+            updated += 1;
+          }
+        })
+      );
     }
 
     return res.json({
@@ -312,20 +318,26 @@ const refreshPredictions = async (req, res) => {
     );
 
     let updated = 0;
-    for (const row of rows) {
-      const predicted = await getPrediction(row.crop_name, row.mandi_name);
-      if (predicted && typeof predicted.predicted_price === "number") {
-        await db.query(
-          "UPDATE prices SET predicted_price = ?, predicted_lower = ?, predicted_upper = ?, predicted_at = NOW() WHERE id = ?",
-          [
-            predicted.predicted_price,
-            predicted.predicted_lower ?? predicted.predicted_price,
-            predicted.predicted_upper ?? predicted.predicted_price,
-            row.id
-          ]
-        );
-        updated += 1;
-      }
+    const batchSize = 3;
+    for (let i = 0; i < rows.length; i += batchSize) {
+      const chunk = rows.slice(i, i + batchSize);
+      await Promise.all(
+        chunk.map(async (row) => {
+          const predicted = await getPrediction(row.crop_name, row.mandi_name);
+          if (predicted && typeof predicted.predicted_price === "number") {
+            await db.query(
+              "UPDATE prices SET predicted_price = ?, predicted_lower = ?, predicted_upper = ?, predicted_at = NOW() WHERE id = ?",
+              [
+                predicted.predicted_price,
+                predicted.predicted_lower ?? predicted.predicted_price,
+                predicted.predicted_upper ?? predicted.predicted_price,
+                row.id
+              ]
+            );
+            updated += 1;
+          }
+        })
+      );
     }
 
     return res.json({

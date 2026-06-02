@@ -39,7 +39,8 @@ const getPrediction = async (cropName, mandiName) => {
       try {
         const response = await makeRequest();
         const predicted = response?.data?.predicted_price;
-        if (typeof predicted !== "number") {
+        if (typeof predicted !== "number" || predicted <= 0) {
+          // ML has no usable data — treat as no prediction
           return null;
         }
         return {

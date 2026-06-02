@@ -91,3 +91,8 @@ export const subscribeWhatsapp = async (payload) => {
   const response = await apiClient.post("/api/farmers/subscribe", payload);
   return response.data;
 };
+
+export const clearStalePredictions = async () => {
+  const response = await apiClient.post("/api/prices/clear-stale-predictions");
+  return response.data;
+};

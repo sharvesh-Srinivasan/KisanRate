@@ -8,7 +8,8 @@ import {
   getWhatsappLogs,
   triggerTestAlert,
   manualPriceAdd,
-  refreshPredictions
+  refreshPredictions,
+  clearStalePredictions
 } from "../api";
 import { Trash2 } from "lucide-react";
 
@@ -140,6 +141,21 @@ const Admin = ({ loading = false, error = null }) => {
     }
   };
 
+  const handleClearStalePredictions = async () => {
+    const confirmed = window.confirm(
+      "This will clear all zero/stale predictions from the DB so they can be re-calculated. Continue?"
+    );
+    if (!confirmed) return;
+    setStatusMessage("");
+    try {
+      const response = await clearStalePredictions();
+      const cleared = response?.data?.cleared ?? 0;
+      setStatusMessage(`Cleared ${cleared} stale prediction rows. Now click Refresh predictions.`);
+    } catch (err) {
+      setStatusMessage("Failed to clear stale predictions.");
+    }
+  };
+
   if (loading) {
     return <div className="min-h-screen bg-cream animate-pulse" />;
   }
@@ -215,6 +231,14 @@ const Admin = ({ loading = false, error = null }) => {
                   className="bg-primary text-white rounded-lg px-5 py-2.5 hover:bg-primary-light transition-colors duration-200"
                 >
                   Fetch prices now
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClearStalePredictions}
+                  className="bg-amber-500 text-white rounded-lg px-5 py-2.5 hover:bg-amber-600 transition-colors duration-200"
+                  title="Clear zero predictions written by the old buggy code"
+                >
+                  Clear stale predictions
                 </button>
                 <button
                   type="button"

@@ -43,12 +43,16 @@ def fetch_price_history(crop_name: str, mandi_name: str):
 def predict_price(crop_name: str, mandi_name: str):
     rows = fetch_price_history(crop_name, mandi_name)
     if not rows:
-        return 0.0, 0.0, 0.0
+        raise ValueError(f"No price history found for crop='{crop_name}', mandi='{mandi_name}'")
 
-    prices = [float(row["modal_price"]) for row in rows]
+    prices = [float(row["modal_price"]) for row in rows if row["modal_price"]]
+    if not prices:
+        raise ValueError(f"All modal_price values are null/zero for crop='{crop_name}', mandi='{mandi_name}'")
+
     average = float(np.mean(prices))
     if len(prices) < 14:
-        return average, average, average
+        # Not enough data for Prophet — return simple average as best estimate
+        return average, average * 0.95, average * 1.05
 
     df = pd.DataFrame(
         {

@@ -343,6 +343,35 @@ const refreshPredictions = async (req, res) => {
   }
 };
 
+const clearStalePredictions = async (req, res) => {
+  try {
+    // Clear any rows where predictions are 0 — these were written before the fix
+    const [result] = await db.query(
+      `UPDATE prices
+       SET predicted_price = NULL,
+           predicted_lower = NULL,
+           predicted_upper = NULL,
+           predicted_at = NULL
+       WHERE predicted_price = 0
+          OR predicted_lower = 0
+          OR predicted_upper = 0`
+    );
+
+    return res.json({
+      success: true,
+      data: { cleared: result.affectedRows },
+      message: `Cleared ${result.affectedRows} stale zero-prediction rows`
+    });
+  } catch (error) {
+    logWarn(`Clear stale predictions failed: ${error.message}`);
+    return res.status(500).json({
+      success: false,
+      data: null,
+      message: "Failed to clear stale predictions"
+    });
+  }
+};
+
 module.exports = {
   getPrices,
   getPriceHistory,
@@ -350,5 +379,6 @@ module.exports = {
   getMandis,
   manualPriceAdd,
   refreshPredictions,
-  predictTodayForState
+  predictTodayForState,
+  clearStalePredictions
 };

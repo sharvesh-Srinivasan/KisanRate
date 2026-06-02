@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
@@ -61,24 +61,21 @@ def predict(request: PredictionRequest):
 
     try:
         predicted_price, lower, upper = predict_price(request.crop, request.mandi)
-        payload = {
-            "crop": request.crop,
-            "mandi": request.mandi,
-            "predicted_price": float(predicted_price),
-            "predicted_lower": float(lower),
-            "predicted_upper": float(upper),
-            "prediction_date": prediction_date,
-        }
-        _set_cached_prediction(key, payload)
-        return payload
-    except Exception:
-        payload = {
-            "crop": request.crop,
-            "mandi": request.mandi,
-            "predicted_price": 0.0,
-            "predicted_lower": 0.0,
-            "predicted_upper": 0.0,
-            "prediction_date": prediction_date,
-        }
-        _set_cached_prediction(key, payload)
-        return payload
+    except ValueError as exc:
+        # Not enough data — don't cache, return clear error
+        raise HTTPException(status_code=422, detail=str(exc))
+    except Exception as exc:
+        # Unexpected error — don't cache, propagate
+        raise HTTPException(status_code=500, detail=f"Prediction failed: {exc}")
+
+    # Only cache and return successful (non-zero) predictions
+    payload = {
+        "crop": request.crop,
+        "mandi": request.mandi,
+        "predicted_price": float(predicted_price),
+        "predicted_lower": float(lower),
+        "predicted_upper": float(upper),
+        "prediction_date": prediction_date,
+    }
+    _set_cached_prediction(key, payload)
+    return payload

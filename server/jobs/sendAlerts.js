@@ -39,14 +39,13 @@ const sendAlertsNow = async () => {
       if (!price) continue;
 
       const predicted = await getPrediction(price.crop_name, price.mandi_name);
+      const predictedPrice = predicted?.predicted_price ?? price.modal_price;
       const name = farmer.name || "farmer";
       const reply =
         `Good morning ${name}!\n` +
         `Today's ${price.crop_name} at ${price.mandi_name}: ` +
         `Rs ${Number(price.modal_price).toLocaleString("en-IN")}/Quintal\n` +
-        `Expected next week: Rs ${Number(
-          predicted || price.modal_price
-        ).toLocaleString("en-IN")}/Quintal\n` +
+        `Expected next week: Rs ${Number(predictedPrice).toLocaleString("en-IN")}/Quintal\n` +
         "Reply STOP to unsubscribe.";
 
       await sendWhatsAppMessage(farmer.phone, reply);

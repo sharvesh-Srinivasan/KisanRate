@@ -75,7 +75,12 @@ const fetchPricesNow = async () => {
       const priceDate = normalizeDate(record.date) || new Date().toISOString().slice(0, 10);
 
       await db.query(
-        "INSERT IGNORE INTO prices (crop_id, mandi_id, min_price, max_price, modal_price, price_date) VALUES (?, ?, ?, ?, ?, ?)",
+        `INSERT INTO prices (crop_id, mandi_id, min_price, max_price, modal_price, price_date)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           min_price = VALUES(min_price),
+           max_price = VALUES(max_price),
+           modal_price = VALUES(modal_price)`,
         [
           cropId,
           mandiId,

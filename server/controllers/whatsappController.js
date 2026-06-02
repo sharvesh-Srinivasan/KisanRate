@@ -335,6 +335,7 @@ const whatsappWebhook = async (req, res) => {
       await clearSession(phone);
 
       const predicted = await getPrediction(today.crop_name, today.mandi_name);
+      const predictedPrice = predicted?.predicted_price ?? today.modal_price;
       const reply =
         `Confirmed: ${today.crop_name} in ${marketName}, ${cityName}.\n` +
         `${today.crop_name} at ${today.mandi_name} (${today.district})\n` +
@@ -342,9 +343,7 @@ const whatsappWebhook = async (req, res) => {
         `Range: Rs ${Number(today.min_price).toLocaleString("en-IN")} - Rs ${Number(
           today.max_price
         ).toLocaleString("en-IN")}\n` +
-        `Next week estimate: Rs ${Number(
-          predicted || today.modal_price
-        ).toLocaleString("en-IN")}/Quintal`;
+        `Next week estimate: Rs ${Number(predictedPrice).toLocaleString("en-IN")}/Quintal`;
 
       twiml.message(reply);
       await logWhatsAppExchange(phone, messageBody, reply);

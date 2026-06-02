@@ -189,9 +189,13 @@ const keepAliveTask = () => {
 };
 
 const cron = require("node-cron");
-cron.schedule("*/14 * * * *", keepAliveTask);
+// Keep-alive every 10 min — Render free tier sleeps after 15 min of inactivity
+cron.schedule("*/10 * * * *", keepAliveTask);
 
 const PORT = Number(process.env.PORT || 4000);
 server.listen(PORT, () => {
   logInfo(`Server running on port ${PORT}`);
+  // Warm up the ML service on startup (non-blocking) so it's ready sooner
+  const mlUrl = String(process.env.ML_SERVICE_URL || "https://kisanrate-ml.onrender.com").replace(/\/$/, "");
+  axios.get(`${mlUrl}/health`).catch(() => {});
 });

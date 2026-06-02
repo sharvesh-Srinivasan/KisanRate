@@ -65,7 +65,6 @@ def predict_price(crop_name: str, mandi_name: str):
 
         future = model.make_future_dataframe(periods=7)
         forecast = model.predict(future)
-        next_week = forecast.tail(7)
         next_day = forecast.tail(1).iloc[0]
         predicted = float(next_day["yhat"])
         lower = float(next_day.get("yhat_lower", predicted))

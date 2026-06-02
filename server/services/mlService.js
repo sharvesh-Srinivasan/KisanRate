@@ -23,40 +23,60 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const getPrediction = async (cropName, mandiName) => {
   try {
     const serviceUrl = resolveMlServiceUrl();
+
     const makeRequest = () =>
       axios.post(
         `${serviceUrl}/predict`,
         { crop: cropName, mandi: mandiName },
-        { timeout: 8000 }
+        { timeout: 35000 }
       );
 
-    let response;
-    try {
-      response = await makeRequest();
-    } catch (error) {
-      const status = error?.response?.status;
-      if (status === 502 || status === 503 || status === 504) {
-        await sleep(500);
-        response = await makeRequest();
-      } else {
-        throw error;
+    // Retry delays in ms: first retry after 2s, second after 8s, third after 20s
+    const retryDelays = [2000, 8000, 20000];
+    let lastError;
+
+    for (let attempt = 0; attempt <= retryDelays.length; attempt++) {
+      try {
+        const response = await makeRequest();
+        const predicted = response?.data?.predicted_price;
+        if (typeof predicted !== "number") {
+          return null;
+        }
+        return {
+          predicted_price: predicted,
+          predicted_lower:
+            typeof response?.data?.predicted_lower === "number"
+              ? response.data.predicted_lower
+              : null,
+          predicted_upper:
+            typeof response?.data?.predicted_upper === "number"
+              ? response.data.predicted_upper
+              : null
+        };
+      } catch (error) {
+        lastError = error;
+        const status = error?.response?.status;
+        const code = error?.code;
+        const isRetryable =
+          status === 502 ||
+          status === 503 ||
+          status === 504 ||
+          code === "ECONNREFUSED" ||
+          code === "ETIMEDOUT" ||
+          code === "ECONNRESET" ||
+          code === "ENOTFOUND";
+
+        if (isRetryable && attempt < retryDelays.length) {
+          const delay = retryDelays[attempt];
+          await sleep(delay);
+          // continue to next attempt
+        } else {
+          throw error;
+        }
       }
     }
-    const predicted = response?.data?.predicted_price;
-    if (typeof predicted !== "number") {
-      return null;
-    }
-    return {
-      predicted_price: predicted,
-      predicted_lower:
-        typeof response?.data?.predicted_lower === "number"
-          ? response.data.predicted_lower
-          : null,
-      predicted_upper:
-        typeof response?.data?.predicted_upper === "number"
-          ? response.data.predicted_upper
-          : null
-    };
+
+    throw lastError;
   } catch (error) {
     logWarn(`ML prediction failed: ${error.message}`);
     return null;

@@ -12,6 +12,28 @@ from model import predict_price
 
 app = FastAPI()
 
+CACHE_TTL = timedelta(hours=6)
+_prediction_cache = {}
+
+
+def _cache_key(crop: str, mandi: str) -> str:
+    return f"{crop.strip().lower()}|{mandi.strip().lower()}"
+
+
+def _get_cached_prediction(key: str):
+    cached = _prediction_cache.get(key)
+    if not cached:
+        return None
+    cached_at, payload = cached
+    if datetime.utcnow() - cached_at > CACHE_TTL:
+        _prediction_cache.pop(key, None)
+        return None
+    return payload
+
+
+def _set_cached_prediction(key: str, payload: dict):
+    _prediction_cache[key] = (datetime.utcnow(), payload)
+
 
 class PredictionRequest(BaseModel):
     crop: str
@@ -30,13 +52,33 @@ def root():
 
 @app.post("/predict")
 def predict(request: PredictionRequest):
-    predicted_price, lower, upper = predict_price(request.crop, request.mandi)
+    key = _cache_key(request.crop, request.mandi)
+    cached = _get_cached_prediction(key)
+    if cached:
+        return cached
+
     prediction_date = (datetime.utcnow() + timedelta(days=1)).date().isoformat()
-    return {
-        "crop": request.crop,
-        "mandi": request.mandi,
-        "predicted_price": float(predicted_price),
-        "predicted_lower": float(lower),
-        "predicted_upper": float(upper),
-        "prediction_date": prediction_date,
-    }
+
+    try:
+        predicted_price, lower, upper = predict_price(request.crop, request.mandi)
+        payload = {
+            "crop": request.crop,
+            "mandi": request.mandi,
+            "predicted_price": float(predicted_price),
+            "predicted_lower": float(lower),
+            "predicted_upper": float(upper),
+            "prediction_date": prediction_date,
+        }
+        _set_cached_prediction(key, payload)
+        return payload
+    except Exception:
+        payload = {
+            "crop": request.crop,
+            "mandi": request.mandi,
+            "predicted_price": 0.0,
+            "predicted_lower": 0.0,
+            "predicted_upper": 0.0,
+            "prediction_date": prediction_date,
+        }
+        _set_cached_prediction(key, payload)
+        return payload

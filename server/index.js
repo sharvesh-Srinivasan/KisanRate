@@ -59,9 +59,21 @@ const ensureWhatsAppSessionsTable = async () => {
       crop_name VARCHAR(100),
       district_name VARCHAR(100),
       city_name VARCHAR(100),
+      market_name VARCHAR(100),
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )`
   );
+
+  const [rows] = await db.query(
+    `SELECT COLUMN_NAME
+     FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'whatsapp_sessions' AND COLUMN_NAME = 'market_name'`,
+    [process.env.DB_NAME]
+  );
+
+  if (!rows.length) {
+    await db.query("ALTER TABLE whatsapp_sessions ADD COLUMN market_name VARCHAR(100)");
+  }
 };
 
 const allowedOrigins = new Set([

@@ -68,55 +68,24 @@ const getPrices = async (req, res) => {
 
     const today = new Date().toISOString().slice(0, 10);
 
-    const enriched = [];
-    for (const row of rows) {
+    const enriched = rows.map((row) => {
       const predictedAt = row.predicted_at
         ? new Date(row.predicted_at).toISOString().slice(0, 10)
         : null;
       const hasFreshPrediction =
         row.predicted_price != null && predictedAt === today;
 
-      if (hasFreshPrediction) {
-        enriched.push({
-          ...row,
-          predicted_price: Number(row.predicted_price),
-          predicted_lower:
-            row.predicted_lower != null ? Number(row.predicted_lower) : null,
-          predicted_upper:
-            row.predicted_upper != null ? Number(row.predicted_upper) : null
-        });
-        continue;
-      }
-
-      const predicted = await getPrediction(row.crop_name, row.mandi_name);
-      if (predicted && typeof predicted.predicted_price === "number") {
-        await db.query(
-          "UPDATE prices SET predicted_price = ?, predicted_lower = ?, predicted_upper = ?, predicted_at = NOW() WHERE id = ?",
-          [
-            predicted.predicted_price,
-            predicted.predicted_lower ?? predicted.predicted_price,
-            predicted.predicted_upper ?? predicted.predicted_price,
-            row.id
-          ]
-        );
-        enriched.push({
-          ...row,
-          predicted_price: predicted.predicted_price,
-          predicted_lower: predicted.predicted_lower ?? predicted.predicted_price,
-          predicted_upper: predicted.predicted_upper ?? predicted.predicted_price
-        });
-      } else {
-        enriched.push({
-          ...row,
-          predicted_price:
-            row.predicted_price != null ? Number(row.predicted_price) : null,
-          predicted_lower:
-            row.predicted_lower != null ? Number(row.predicted_lower) : null,
-          predicted_upper:
-            row.predicted_upper != null ? Number(row.predicted_upper) : null
-        });
-      }
-    }
+      return {
+        ...row,
+        predicted_price:
+          row.predicted_price != null ? Number(row.predicted_price) : null,
+        predicted_lower:
+          row.predicted_lower != null ? Number(row.predicted_lower) : null,
+        predicted_upper:
+          row.predicted_upper != null ? Number(row.predicted_upper) : null,
+        prediction_fresh: hasFreshPrediction
+      };
+    });
 
     return res.json({
       success: true,

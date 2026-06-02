@@ -26,7 +26,7 @@ const logWhatsAppExchange = async (phone, incoming, outgoing) => {
 
 const getSession = async (phone) => {
   const [rows] = await db.query(
-    "SELECT phone, step, intent, crop_name, district_name, city_name FROM whatsapp_sessions WHERE phone = ? LIMIT 1",
+    "SELECT phone, step, intent, crop_name, district_name, city_name, market_name FROM whatsapp_sessions WHERE phone = ? LIMIT 1",
     [phone]
   );
   return rows[0] || null;
@@ -38,19 +38,21 @@ const saveSession = async (phone, data) => {
     intent: data.intent || "",
     cropName: data.cropName || null,
     districtName: data.districtName || null,
-    cityName: data.cityName || null
+    cityName: data.cityName || null,
+    marketName: data.marketName || null
   };
 
   await db.query(
-    "INSERT INTO whatsapp_sessions (phone, step, intent, crop_name, district_name, city_name) VALUES (?, ?, ?, ?, ?, ?) " +
-      "ON DUPLICATE KEY UPDATE step = VALUES(step), intent = VALUES(intent), crop_name = VALUES(crop_name), district_name = VALUES(district_name), city_name = VALUES(city_name)",
+    "INSERT INTO whatsapp_sessions (phone, step, intent, crop_name, district_name, city_name, market_name) VALUES (?, ?, ?, ?, ?, ?, ?) " +
+      "ON DUPLICATE KEY UPDATE step = VALUES(step), intent = VALUES(intent), crop_name = VALUES(crop_name), district_name = VALUES(district_name), city_name = VALUES(city_name), market_name = VALUES(market_name)",
     [
       phone,
       payload.step,
       payload.intent,
       payload.cropName,
       payload.districtName,
-      payload.cityName
+      payload.cityName,
+      payload.marketName
     ]
   );
 };
@@ -92,6 +94,14 @@ const fetchTodayPriceByTown = async (cropName, districtName, townName) => {
     [`%${cropName}%`, `%${districtName}%`, `%${townName}%`]
   );
   return rows[0] || null;
+};
+
+const fetchMandisByDistrict = async (districtName) => {
+  const [rows] = await db.query(
+    "SELECT id, name, district FROM mandis WHERE district LIKE ? ORDER BY name ASC LIMIT 10",
+    [`%${districtName}%`]
+  );
+  return rows || [];
 };
 
 const findCropAndMandi = async (cropName, districtName) => {
@@ -144,9 +154,9 @@ const whatsappWebhook = async (req, res) => {
     if (upperMessage === "HI" || upperMessage === "HELLO") {
       const reply =
         "Welcome to KisanRate!\n" +
-        "Send: {crop} {location} - get today's price\n" +
-        "Send: SUBSCRIBE {crop} {location} - get daily alerts\n" +
-        "We'll ask for district, then city.\n" +
+        "Send: {crop} - get today's price\n" +
+        "Send: SUBSCRIBE {crop} - get daily alerts\n" +
+        "We'll ask for your city and then show markets.\n" +
         "Send: STOP - unsubscribe\n" +
         "Send: RESET - start over";
       twiml.message(reply);
@@ -174,14 +184,14 @@ const whatsappWebhook = async (req, res) => {
       }
 
       await saveSession(phone, {
-        step: "awaiting_district",
+        step: "awaiting_city",
         intent: "subscribe",
         cropName
       });
 
       const reply =
         `Got it — ${cropName} updates.\n` +
-        "Which district are you in?\n" +
+        "Which city are you in?\n" +
         "Example: Coimbatore, Erode, Tiruppur";
       twiml.message(reply);
       await logWhatsAppExchange(phone, messageBody, reply);
@@ -201,66 +211,54 @@ const whatsappWebhook = async (req, res) => {
     }
 
     const activeSession = await getSession(phone);
-    if (activeSession && activeSession.step === "awaiting_district") {
-      const districtName = messageBody.trim();
-      if (!districtName) {
-        const reply = "Please reply with your district name.";
-        twiml.message(reply);
-        await logWhatsAppExchange(phone, messageBody, reply);
-        return res.type("text/xml").send(twiml.toString());
-      }
-
-      await saveSession(phone, {
-        step: "awaiting_city",
-        intent: activeSession.intent,
-        cropName: activeSession.crop_name,
-        districtName
-      });
-
-      const reply =
-        `Which city or town in ${districtName} district?\n` +
-        "Example: Coimbatore City, Sulur, Pollachi";
-      twiml.message(reply);
-      await logWhatsAppExchange(phone, messageBody, reply);
-      return res.type("text/xml").send(twiml.toString());
-    }
-
     if (activeSession && activeSession.step === "awaiting_city") {
       const cityName = messageBody.trim();
       if (!cityName) {
-        const reply = "Please reply with your city or town.";
+        const reply = "Please reply with your city name.";
+        twiml.message(reply);
+        await logWhatsAppExchange(phone, messageBody, reply);
+        return res.type("text/xml").send(twiml.toString());
+      }
+
+      const mandis = await fetchMandisByDistrict(cityName);
+      if (!mandis.length) {
+        const reply =
+          `I couldn't find any markets in ${cityName}.\n` +
+          "Please reply with another city.";
         twiml.message(reply);
         await logWhatsAppExchange(phone, messageBody, reply);
         return res.type("text/xml").send(twiml.toString());
       }
 
       await saveSession(phone, {
-        step: "awaiting_town",
+        step: "awaiting_market",
         intent: activeSession.intent,
         cropName: activeSession.crop_name,
-        districtName: activeSession.district_name,
-        cityName
+        districtName: null,
+        cityName,
+        marketName: null
       });
 
+      const marketList = mandis.map((mandi) => `- ${mandi.name}`).join("\n");
       const reply =
-        `Which town or locality in ${cityName}?\n` +
-        "Example: Singanallur, R.S. Puram, Peelamedu";
+        `Markets in ${cityName}:\n` +
+        `${marketList}\n` +
+        "Reply with the market name.";
       twiml.message(reply);
       await logWhatsAppExchange(phone, messageBody, reply);
       return res.type("text/xml").send(twiml.toString());
     }
 
-    if (activeSession && activeSession.step === "awaiting_town") {
-      const townName = messageBody.trim();
-      if (!townName) {
-        const reply = "Please reply with your town or locality.";
+    if (activeSession && activeSession.step === "awaiting_market") {
+      const marketName = messageBody.trim();
+      if (!marketName) {
+        const reply = "Please reply with the market name.";
         twiml.message(reply);
         await logWhatsAppExchange(phone, messageBody, reply);
         return res.type("text/xml").send(twiml.toString());
       }
 
       const cropName = activeSession.crop_name;
-      const districtName = activeSession.district_name;
       const cityName = activeSession.city_name;
 
       const crop = await findCropByName(cropName);
@@ -272,22 +270,31 @@ const whatsappWebhook = async (req, res) => {
         return res.type("text/xml").send(twiml.toString());
       }
 
-      const mandi = await findMandiByDistrictTown(districtName, townName);
+      const mandi = await findMandiByDistrictTown(cityName, marketName);
       if (!mandi) {
         const reply =
-          `I couldn't find ${townName} in ${districtName} district.\n` +
-          "Please reply with another town or locality.";
+          `I couldn't find ${marketName} in ${cityName}.\n` +
+          "Please reply with another market name.";
         twiml.message(reply);
         await logWhatsAppExchange(phone, messageBody, reply);
         return res.type("text/xml").send(twiml.toString());
       }
 
-      const today = await fetchTodayPriceByTown(crop.name, districtName, townName);
+      await saveSession(phone, {
+        step: "complete",
+        intent: activeSession.intent,
+        cropName,
+        districtName: null,
+        cityName,
+        marketName
+      });
+
+      const today = await fetchTodayPriceByTown(crop.name, cityName, marketName);
       if (!today) {
         await clearSession(phone);
         const reply =
-          `Confirmed: ${crop.name} in ${townName}, ${cityName}, ${districtName}.\n` +
-          `No pricing data available for ${crop.name} in ${townName}, ${cityName}, ${districtName}. ` +
+          `Confirmed: ${crop.name} in ${marketName}, ${cityName}.\n` +
+          `No pricing data available for ${crop.name} in ${marketName}, ${cityName}. ` +
           "Please check the crop name or try another location.";
         twiml.message(reply);
         await logWhatsAppExchange(phone, messageBody, reply);
@@ -315,7 +322,7 @@ const whatsappWebhook = async (req, res) => {
         await clearSession(phone);
 
         const reply =
-          `Confirmed: ${crop.name} in ${townName}, ${cityName}, ${districtName}.\n` +
+          `Confirmed: ${crop.name} in ${marketName}, ${cityName}.\n` +
           `Subscribed! Today's ${crop.name} at ${today.mandi_name}: ` +
           `Rs ${Number(today.modal_price).toLocaleString("en-IN")}/Quintal\n` +
           "You'll get daily alerts at 7AM.";
@@ -329,7 +336,7 @@ const whatsappWebhook = async (req, res) => {
 
       const predicted = await getPrediction(today.crop_name, today.mandi_name);
       const reply =
-        `Confirmed: ${today.crop_name} in ${townName}, ${cityName}, ${districtName}.\n` +
+        `Confirmed: ${today.crop_name} in ${marketName}, ${cityName}.\n` +
         `${today.crop_name} at ${today.mandi_name} (${today.district})\n` +
         `Today: Rs ${Number(today.modal_price).toLocaleString("en-IN")}/Quintal\n` +
         `Range: Rs ${Number(today.min_price).toLocaleString("en-IN")} - Rs ${Number(
@@ -356,14 +363,14 @@ const whatsappWebhook = async (req, res) => {
       }
 
       await saveSession(phone, {
-        step: "awaiting_district",
+        step: "awaiting_city",
         intent: "price",
         cropName
       });
 
       const reply =
         `Got it — ${cropName}.\n` +
-        "Which district are you in?\n" +
+        "Which city are you in?\n" +
         "Example: Coimbatore, Erode, Tiruppur";
       twiml.message(reply);
       await logWhatsAppExchange(phone, messageBody, reply);

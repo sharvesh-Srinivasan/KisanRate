@@ -28,11 +28,11 @@ const getPrediction = async (cropName, mandiName) => {
       axios.post(
         `${serviceUrl}/predict`,
         { crop: cropName, mandi: mandiName },
-        { timeout: 35000 }
+        { timeout: 90000 }
       );
 
-    // Retry delays in ms: first retry after 2s, second after 8s, third after 20s
-    const retryDelays = [2000, 8000, 20000];
+    // Retry delays in ms: first retry after 60s (Render cold-start), second after 15s, third after 20s
+    const retryDelays = [60000, 15000, 20000];
     let lastError;
 
     for (let attempt = 0; attempt <= retryDelays.length; attempt++) {

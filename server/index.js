@@ -91,18 +91,12 @@ const ensurePushSubscriptionsTable = async () => {
 };
 
 const ensureAdminUser = async () => {
-  const [rows] = await db.query(
-    "SELECT id FROM admins WHERE username = ? LIMIT 1",
-    ["admin"]
-  );
-  if (rows.length) return;
-
   const hash = await bcrypt.hash("admin123", 10);
   await db.query(
-    "INSERT INTO admins (username, password_hash) VALUES (?, ?)",
+    "INSERT INTO admins (username, password_hash) VALUES (?, ?) ON DUPLICATE KEY UPDATE password_hash = VALUES(password_hash)",
     ["admin", hash]
   );
-  logInfo("Default admin user created");
+  logInfo("Admin user ensured with default password");
 };
 
 const allowedOrigins = new Set([

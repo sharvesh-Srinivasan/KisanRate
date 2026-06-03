@@ -90,6 +90,21 @@ const ensurePushSubscriptionsTable = async () => {
   );
 };
 
+const ensureAdminUser = async () => {
+  const [rows] = await db.query(
+    "SELECT id FROM admins WHERE username = ? LIMIT 1",
+    ["admin"]
+  );
+  if (rows.length) return;
+
+  const hash = await bcrypt.hash("admin123", 10);
+  await db.query(
+    "INSERT INTO admins (username, password_hash) VALUES (?, ?)",
+    ["admin", hash]
+  );
+  logInfo("Default admin user created");
+};
+
 const allowedOrigins = new Set([
   "https://kisanrate.vercel.app",
   "https://kisan-rate.vercel.app",
@@ -194,6 +209,10 @@ ensureWhatsAppSessionsTable().catch((error) => {
 
 ensurePushSubscriptionsTable().catch((error) => {
   logWarn(`Push subscriptions table setup failed: ${error.message}`);
+});
+
+ensureAdminUser().catch((error) => {
+  logWarn(`Admin user setup failed: ${error.message}`);
 });
 
 const keepAliveTargets = [

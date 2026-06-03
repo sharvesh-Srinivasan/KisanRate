@@ -96,3 +96,18 @@ export const clearStalePredictions = async () => {
   const response = await apiClient.post("/api/prices/clear-stale-predictions");
   return response.data;
 };
+
+export const getAnalytics = async () => {
+  const response = await apiClient.get("/api/prices/analytics");
+  return response.data;
+};
+
+export const getVapidPublicKey = async () => {
+  const response = await apiClient.get("/api/push/vapid-public-key");
+  return response.data;
+};
+
+export const saveSubscription = async (subscription) => {
+  const response = await apiClient.post("/api/push/subscribe", subscription);
+  return response.data;
+};

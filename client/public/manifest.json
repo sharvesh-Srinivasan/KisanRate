@@ -1,0 +1,19 @@
+{
+  "short_name": "KisanRate",
+  "name": "KisanRate — Hyperlocal Crop Prices",
+  "description": "Real-time crop price discovery and ML-powered price predictions for farmers across India.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FDFAF5",
+  "theme_color": "#3B6E2F",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ],
+  "categories": ["agriculture", "finance", "utilities"],
+  "lang": "en-IN"
+}

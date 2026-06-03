@@ -5,6 +5,7 @@ import FilterBar from "../components/FilterBar";
 import PriceCard from "../components/PriceCard";
 import PriceChart from "../components/PriceChart";
 import WhatsAppCTA from "../components/WhatsAppCTA";
+import PushNotificationBanner from "../components/PushNotificationBanner";
 import {
   getPrices,
   getCrops,
@@ -226,6 +227,7 @@ const Home = ({ loading = false, error = null }) => {
 
   return (
     <div className="app-shell min-h-screen">
+      <PushNotificationBanner />
       <Navbar />
       <div className="pt-20 pb-12">
         <header className="max-w-6xl mx-auto px-6">

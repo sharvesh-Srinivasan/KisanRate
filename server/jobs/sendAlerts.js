@@ -2,6 +2,7 @@ const cron = require("node-cron");
 const db = require("../config/db");
 const { sendWhatsAppMessage } = require("../services/twilioService");
 const { getPrediction } = require("../services/mlService");
+const { sendPushToAll } = require("../controllers/pushController");
 
 const timestamp = () => new Date().toISOString();
 const logWarn = (message) => {
@@ -50,6 +51,13 @@ const sendAlertsNow = async () => {
 
       await sendWhatsAppMessage(farmer.phone, reply);
     }
+
+    // Also push to browser subscribers with a summary
+    await sendPushToAll({
+      title: "KisanRate — Today's Prices",
+      body: "Today's crop prices have been updated. Tap to view the latest rates.",
+      url: "/"
+    });
   } catch (error) {
     logWarn(`Send alerts job failed: ${error.message}`);
   }

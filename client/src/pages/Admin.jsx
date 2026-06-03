@@ -12,6 +12,7 @@ import {
   clearStalePredictions
 } from "../api";
 import { Trash2 } from "lucide-react";
+import AnalyticsTab from "../components/AnalyticsTab";
 
 // Props: { loading?: boolean, error?: string | null }
 const Admin = ({ loading = false, error = null }) => {
@@ -185,6 +186,15 @@ const Admin = ({ loading = false, error = null }) => {
           <button
             type="button"
             className={`text-left px-3 py-2 rounded-lg ${
+              activeTab === "analytics" ? "bg-primary" : "hover:bg-primary/20"
+            }`}
+            onClick={() => setActiveTab("analytics")}
+          >
+            Analytics
+          </button>
+          <button
+            type="button"
+            className={`text-left px-3 py-2 rounded-lg ${
               activeTab === "farmers" ? "bg-primary" : "hover:bg-primary/20"
             }`}
             onClick={() => setActiveTab("farmers")}
@@ -217,6 +227,8 @@ const Admin = ({ loading = false, error = null }) => {
           <div className="text-text-muted text-sm">Loading...</div>
         )}
         {tabError && <div className="text-danger text-sm">{tabError}</div>}
+
+        {activeTab === "analytics" && <AnalyticsTab />}
 
         {activeTab === "prices" && (
           <div className="space-y-6">

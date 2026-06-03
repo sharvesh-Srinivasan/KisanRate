@@ -13,6 +13,7 @@ const priceRoutes = require("./routes/priceRoutes");
 const farmerRoutes = require("./routes/farmerRoutes");
 const alertRoutes = require("./routes/alertRoutes");
 const whatsappRoutes = require("./routes/whatsappRoutes");
+const pushRoutes = require("./routes/pushRoutes");
 const { startFetchPricesJob } = require("./jobs/fetchPrices");
 const { startSendAlertsJob } = require("./jobs/sendAlerts");
 
@@ -74,6 +75,19 @@ const ensureWhatsAppSessionsTable = async () => {
   if (!rows.length) {
     await db.query("ALTER TABLE whatsapp_sessions ADD COLUMN market_name VARCHAR(100)");
   }
+};
+
+const ensurePushSubscriptionsTable = async () => {
+  await db.query(
+    `CREATE TABLE IF NOT EXISTS push_subscriptions (
+      endpoint VARCHAR(512) PRIMARY KEY,
+      auth VARCHAR(255),
+      p256dh VARCHAR(255),
+      subscription_json TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )`
+  );
 };
 
 const allowedOrigins = new Set([
@@ -164,6 +178,7 @@ app.use("/api/prices", priceRoutes);
 app.use("/api/farmers", farmerRoutes);
 app.use("/api/alerts", alertRoutes);
 app.use("/api/whatsapp", whatsappRoutes);
+app.use("/api/push", pushRoutes);
 
 initSocket(server, corsOptions);
 startFetchPricesJob();
@@ -175,6 +190,10 @@ ensurePredictionColumns().catch((error) => {
 
 ensureWhatsAppSessionsTable().catch((error) => {
   logWarn(`WhatsApp session setup failed: ${error.message}`);
+});
+
+ensurePushSubscriptionsTable().catch((error) => {
+  logWarn(`Push subscriptions table setup failed: ${error.message}`);
 });
 
 const keepAliveTargets = [

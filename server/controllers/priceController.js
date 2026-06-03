@@ -355,6 +355,76 @@ const refreshPredictions = async (req, res) => {
   }
 };
 
+const getAnalytics = async (req, res) => {
+  try {
+    const [topCrops] = await db.query(
+      `SELECT c.name AS crop_name, COUNT(*) AS record_count
+       FROM prices p
+       JOIN crops c ON p.crop_id = c.id
+       GROUP BY c.id, c.name
+       ORDER BY record_count DESC
+       LIMIT 5`
+    );
+
+    const [busiestMandis] = await db.query(
+      `SELECT m.name AS mandi_name, m.district, COUNT(*) AS record_count
+       FROM prices p
+       JOIN mandis m ON p.mandi_id = m.id
+       GROUP BY m.id, m.name, m.district
+       ORDER BY record_count DESC
+       LIMIT 5`
+    );
+
+    const [priceTrend] = await db.query(
+      `SELECT price_date, ROUND(AVG(modal_price), 2) AS avg_price
+       FROM prices
+       WHERE price_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+       GROUP BY price_date
+       ORDER BY price_date ASC`
+    );
+
+    const [predictionAccuracy] = await db.query(
+      `SELECT price_date,
+              ROUND(AVG(modal_price), 2) AS actual,
+              ROUND(AVG(predicted_price), 2) AS predicted
+       FROM prices
+       WHERE predicted_price IS NOT NULL
+         AND predicted_price > 0
+         AND price_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+       GROUP BY price_date
+       ORDER BY price_date ASC`
+    );
+
+    const [summary] = await db.query(
+      `SELECT
+         COUNT(DISTINCT crop_id) AS total_crops,
+         COUNT(DISTINCT mandi_id) AS total_mandis,
+         COUNT(*) AS total_records,
+         SUM(CASE WHEN predicted_price IS NOT NULL AND predicted_price > 0 THEN 1 ELSE 0 END) AS predicted_count
+       FROM prices`
+    );
+
+    return res.json({
+      success: true,
+      data: {
+        topCrops,
+        busiestMandis,
+        priceTrend,
+        predictionAccuracy,
+        summary: summary[0]
+      },
+      message: "Analytics fetched"
+    });
+  } catch (error) {
+    logWarn(`Analytics failed: ${error.message}`);
+    return res.status(500).json({
+      success: false,
+      data: null,
+      message: "Failed to fetch analytics"
+    });
+  }
+};
+
 const clearStalePredictions = async (req, res) => {
   try {
     // Clear any rows where predictions are 0 — these were written before the fix
@@ -392,5 +462,6 @@ module.exports = {
   manualPriceAdd,
   refreshPredictions,
   predictTodayForState,
-  clearStalePredictions
+  clearStalePredictions,
+  getAnalytics
 };

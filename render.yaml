@@ -1,0 +1,32 @@
+services:
+  # ─── ML / Python service ──────────────────────────────────────────────────
+  - type: web
+    name: kisanrate-ml
+    runtime: python
+    rootDir: ml
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DB_HOST
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_PORT
+        value: "3306"
+
+  # ─── Node / Express backend ───────────────────────────────────────────────
+  - type: web
+    name: kisanrate-backend
+    runtime: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: PORT
+        value: "4000"
+      - key: ML_SERVICE_URL
+        value: https://kisanrate-ml.onrender.com

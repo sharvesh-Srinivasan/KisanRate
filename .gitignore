@@ -11,3 +11,6 @@ __pycache__/
 build/
 dist/
 .DS_Store
+
+# Docker local overrides (developer-specific)
+docker-compose.override.yml

@@ -176,45 +176,40 @@ const Admin = ({ loading = false, error = null }) => {
         <nav className="flex flex-col gap-2 text-sm font-medium">
           <button
             type="button"
-            className={`text-left px-3 py-2 rounded-lg ${
-              activeTab === "prices" ? "bg-primary" : "hover:bg-primary/20"
-            }`}
+            className={`text-left px-3 py-2 rounded-lg ${activeTab === "prices" ? "bg-primary" : "hover:bg-primary/20"
+              }`}
             onClick={() => setActiveTab("prices")}
           >
             Prices
           </button>
           <button
             type="button"
-            className={`text-left px-3 py-2 rounded-lg ${
-              activeTab === "analytics" ? "bg-primary" : "hover:bg-primary/20"
-            }`}
+            className={`text-left px-3 py-2 rounded-lg ${activeTab === "analytics" ? "bg-primary" : "hover:bg-primary/20"
+              }`}
             onClick={() => setActiveTab("analytics")}
           >
             Analytics
           </button>
           <button
             type="button"
-            className={`text-left px-3 py-2 rounded-lg ${
-              activeTab === "farmers" ? "bg-primary" : "hover:bg-primary/20"
-            }`}
+            className={`text-left px-3 py-2 rounded-lg ${activeTab === "farmers" ? "bg-primary" : "hover:bg-primary/20"
+              }`}
             onClick={() => setActiveTab("farmers")}
           >
             Farmers
           </button>
           <button
             type="button"
-            className={`text-left px-3 py-2 rounded-lg ${
-              activeTab === "logs" ? "bg-primary" : "hover:bg-primary/20"
-            }`}
+            className={`text-left px-3 py-2 rounded-lg ${activeTab === "logs" ? "bg-primary" : "hover:bg-primary/20"
+              }`}
             onClick={() => setActiveTab("logs")}
           >
             WhatsApp Logs
           </button>
           <button
             type="button"
-            className={`text-left px-3 py-2 rounded-lg ${
-              activeTab === "alerts" ? "bg-primary" : "hover:bg-primary/20"
-            }`}
+            className={`text-left px-3 py-2 rounded-lg ${activeTab === "alerts" ? "bg-primary" : "hover:bg-primary/20"
+              }`}
             onClick={() => setActiveTab("alerts")}
           >
             Alerts
@@ -349,11 +344,10 @@ const Admin = ({ loading = false, error = null }) => {
                         <button
                           type="button"
                           onClick={() => handleToggleSubscribe(farmer)}
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            farmer.subscribed
+                          className={`px-3 py-1 rounded-full text-xs font-medium ${farmer.subscribed
                               ? "bg-green-100 text-success"
                               : "bg-border text-text-muted"
-                          }`}
+                            }`}
                         >
                           {farmer.subscribed ? "Subscribed" : "Paused"}
                         </button>

@@ -1,0 +1,28 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# KisanRate — Production Docker Compose Overrides
+#
+# Use this when running Docker images pulled from GHCR (GitHub Container Registry)
+# instead of building locally.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  ml:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-sharvesh-srinivasan}/kisanrate-ml:latest
+    build:
+      # Disable local build in prod — use pulled image instead
+      context: "."
+      dockerfile: /dev/null
+
+  server:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-sharvesh-srinivasan}/kisanrate-server:latest
+    build:
+      context: "."
+      dockerfile: /dev/null
+
+  # Client is deployed on Vercel in production — exclude from prod stack
+  client:
+    profiles:
+      - local-only

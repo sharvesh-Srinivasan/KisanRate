@@ -1,0 +1,112 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+# Prevent concurrent deploys (cancel in-progress if a new push arrives)
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}
+
+jobs:
+  # ── Build & Push Docker Images to GHCR ───────────────────────────────────
+  build-push:
+    name: Build & Push Images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write   # needed to push to GHCR
+
+    strategy:
+      matrix:
+        include:
+          - service: server
+            context: ./server
+          - service: ml
+            context: ./ml
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}   # GITHUB_TOKEN is automatic — no manual secret needed
+
+      - name: Extract metadata (tags + labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_PREFIX }}/kisanrate-${{ matrix.service }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix=sha-
+
+      - name: Build and push ${{ matrix.service }}
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.context }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── Deploy to Render ──────────────────────────────────────────────────────
+  deploy-render:
+    name: Trigger Render Deploy
+    runs-on: ubuntu-latest
+    needs: build-push   # wait for images to be pushed before deploying
+
+    steps:
+      - name: Deploy ML service to Render
+        # Uses the Render deploy hook stored as a GitHub Secret
+        # Go to: GitHub repo → Settings → Secrets → Actions → New secret
+        # Name: RENDER_DEPLOY_HOOK_ML
+        # Value: your Render deploy hook URL for kisanrate-ml
+        run: |
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            --request POST \
+            "${{ secrets.RENDER_DEPLOY_HOOK_ML }}")
+          echo "ML deploy hook response: $HTTP_STATUS"
+          if [ "$HTTP_STATUS" -lt 200 ] || [ "$HTTP_STATUS" -ge 300 ]; then
+            echo "::error::ML Render deploy hook failed with status $HTTP_STATUS"
+            exit 1
+          fi
+
+      - name: Deploy Server to Render
+        # Name: RENDER_DEPLOY_HOOK_SERVER
+        # Value: your Render deploy hook URL for kisanrate-backend
+        run: |
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            --request POST \
+            "${{ secrets.RENDER_DEPLOY_HOOK_SERVER }}")
+          echo "Server deploy hook response: $HTTP_STATUS"
+          if [ "$HTTP_STATUS" -lt 200 ] || [ "$HTTP_STATUS" -ge 300 ]; then
+            echo "::error::Server Render deploy hook failed with status $HTTP_STATUS"
+            exit 1
+          fi
+
+      - name: Summarise deployment
+        run: |
+          echo "## 🚀 Deployment Triggered" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Service | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| ML (FastAPI) | ✅ Deploy hook triggered |" >> $GITHUB_STEP_SUMMARY
+          echo "| Server (Express) | ✅ Deploy hook triggered |" >> $GITHUB_STEP_SUMMARY
+          echo "| Client (React) | ✅ Auto-deployed by Vercel |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Commit: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY

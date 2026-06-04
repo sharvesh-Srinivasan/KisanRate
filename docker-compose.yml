@@ -1,0 +1,120 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# KisanRate — Local Development Stack
+#
+# Usage:
+#   1. cp .env.example .env          # fill in real values
+#   2. docker compose up --build     # start everything
+#
+# Services:
+#   db       → MySQL 8.0  (port 3306)
+#   ml       → FastAPI    (port 8000)
+#   server   → Express    (port 4000)
+#   client   → Nginx      (port 3000)  — serves production build
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  # ── MySQL ────────────────────────────────────────────────────────────────────
+  db:
+    image: mysql:8.0
+    container_name: kisanrate-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_NAME:-kisanrate}
+      MYSQL_USER: ${DB_USER:-kisanrate}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-root}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      # Auto-import schema on first start
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD:-root}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ── ML / FastAPI ──────────────────────────────────────────────────────────────
+  ml:
+    build:
+      context: ./ml
+      dockerfile: Dockerfile
+    container_name: kisanrate-ml
+    restart: unless-stopped
+    environment:
+      DB_HOST: db
+      DB_PORT: ${DB_PORT:-3306}
+      DB_USER: ${DB_USER:-kisanrate}
+      DB_PASSWORD: ${DB_PASSWORD:-root}
+      DB_NAME: ${DB_NAME:-kisanrate}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ── Node / Express ────────────────────────────────────────────────────────────
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: kisanrate-server
+    restart: unless-stopped
+    environment:
+      PORT: ${PORT:-4000}
+      DB_HOST: db
+      DB_PORT: ${DB_PORT:-3306}
+      DB_USER: ${DB_USER:-kisanrate}
+      DB_PASSWORD: ${DB_PASSWORD:-root}
+      DB_NAME: ${DB_NAME:-kisanrate}
+      JWT_SECRET: ${JWT_SECRET}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+      TWILIO_WHATSAPP_FROM: ${TWILIO_WHATSAPP_FROM}
+      AGMARKNET_API_KEY: ${AGMARKNET_API_KEY}
+      AGMARKNET_STATES: ${AGMARKNET_STATES:-Tamil Nadu}
+      ML_SERVICE_URL: http://ml:8000
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
+    ports:
+      - "4000:4000"
+    depends_on:
+      db:
+        condition: service_healthy
+      ml:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4000/api/prices/crops', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # ── React / Nginx ─────────────────────────────────────────────────────────────
+  # Note: In production, this is deployed on Vercel (no Docker needed).
+  # This service is here purely for local full-stack testing.
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:4000}
+        REACT_APP_SOCKET_URL: ${REACT_APP_SOCKET_URL:-http://localhost:4000}
+    container_name: kisanrate-client
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - server
+
+volumes:
+  mysql_data:
+    driver: local

@@ -307,15 +307,6 @@ const Home = ({ loading = false, error = null }) => {
           </div>
         </header>
 
-        <WhatsAppCTA
-          loading={loadingPrices}
-          error={errorPrices}
-          crops={crops}
-          mandis={mandis}
-          sandboxNumber={whatsappSandboxNumber}
-          joinCode={whatsappJoinCode}
-        />
-
         <section className="max-w-6xl mx-auto px-6 mt-8">
           <div className="glass-panel rounded-2xl">
             <StatsBanner stats={stats} />
@@ -404,6 +395,16 @@ const Home = ({ loading = false, error = null }) => {
             </div>
           )}
         </section>
+
+        {/* ── WhatsApp CTA — placed after prices where users are already engaged ── */}
+        <WhatsAppCTA
+          loading={loadingPrices}
+          error={errorPrices}
+          crops={crops}
+          mandis={mandis}
+          sandboxNumber={whatsappSandboxNumber}
+          joinCode={whatsappJoinCode}
+        />
 
         <section id="about" className="max-w-6xl mx-auto px-6 pb-16 mt-12">
           <div className="glass-panel rounded-2xl p-6 md:p-8">

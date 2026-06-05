@@ -8,7 +8,9 @@ const {
   refreshPredictions,
   predictTodayForState,
   clearStalePredictions,
-  getAnalytics
+  getAnalytics,
+  reportPrice,
+  getPriceReports
 } = require("../controllers/priceController");
 const { authenticate } = require("../middleware/authMiddleware");
 
@@ -23,5 +25,7 @@ router.post("/refresh-predictions", authenticate, refreshPredictions);
 router.post("/predict-now", predictTodayForState);
 router.post("/clear-stale-predictions", authenticate, clearStalePredictions);
 router.get("/analytics", authenticate, getAnalytics);
+router.post("/:id/report", reportPrice);
+router.get("/reports", authenticate, getPriceReports);
 
 module.exports = router;

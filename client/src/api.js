@@ -111,3 +111,13 @@ export const saveSubscription = async (subscription) => {
   const response = await apiClient.post("/api/push/subscribe", subscription);
   return response.data;
 };
+
+export const reportPrice = async (priceId, data) => {
+  const response = await apiClient.post(`/api/prices/${priceId}/report`, data);
+  return response.data;
+};
+
+export const getPriceReports = async () => {
+  const response = await apiClient.get("/api/prices/reports");
+  return response.data;
+};

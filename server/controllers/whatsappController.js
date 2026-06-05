@@ -121,11 +121,55 @@ const findCropAndMandi = async (cropName, districtName) => {
 };
 
 const findCropByName = async (cropName) => {
-  const [rows] = await db.query(
+  // Exact match first
+  const [exact] = await db.query(
     "SELECT id, name FROM crops WHERE name LIKE ? LIMIT 1",
     [`%${cropName}%`]
   );
-  return rows[0] || null;
+  if (exact[0]) return exact[0];
+
+  // Fuzzy: try each word in the crop name
+  const words = cropName.toLowerCase().split(/\s+/);
+  for (const word of words) {
+    if (word.length < 3) continue;
+    const [fuzzy] = await db.query(
+      "SELECT id, name FROM crops WHERE LOWER(name) LIKE ? LIMIT 1",
+      [`%${word}%`]
+    );
+    if (fuzzy[0]) return fuzzy[0];
+  }
+  return null;
+};
+
+const fetchBestCropsForDistrict = async (districtName) => {
+  const [rows] = await db.query(
+    `SELECT c.name AS crop_name, p.modal_price, m.name AS mandi_name
+     FROM prices p
+     JOIN crops c ON p.crop_id = c.id
+     JOIN mandis m ON p.mandi_id = m.id
+     WHERE p.price_date = CURDATE()
+       AND m.district LIKE ?
+     ORDER BY p.modal_price DESC
+     LIMIT 5`,
+    [`%${districtName}%`]
+  );
+  return rows || [];
+};
+
+const fetchBestMandiForCropInDistrict = async (cropName, districtName) => {
+  const [rows] = await db.query(
+    `SELECT p.modal_price, m.name AS mandi_name, m.district, c.name AS crop_name
+     FROM prices p
+     JOIN crops c ON p.crop_id = c.id
+     JOIN mandis m ON p.mandi_id = m.id
+     WHERE p.price_date = CURDATE()
+       AND c.name LIKE ?
+       AND m.district LIKE ?
+     ORDER BY p.modal_price DESC
+     LIMIT 5`,
+    [`%${cropName}%`, `%${districtName}%`]
+  );
+  return rows || [];
 };
 
 const findMandiByDistrictTown = async (districtName, townName) => {
@@ -153,12 +197,15 @@ const whatsappWebhook = async (req, res) => {
 
     if (upperMessage === "HI" || upperMessage === "HELLO") {
       const reply =
-        "Welcome to KisanRate!\n" +
-        "Send: {crop} - get today's price\n" +
-        "Send: SUBSCRIBE {crop} - get daily alerts\n" +
-        "We'll ask for your city and then show markets.\n" +
+        "Welcome to KisanRate! 🌾\n" +
+        "Send: {crop name} - get today's price\n" +
+        "Send: SUBSCRIBE {crop} - daily alerts\n" +
+        "Send: BEST {city} - top prices in your city\n" +
+        "Send: TOP {city} - top 3 crops today\n" +
         "Send: STOP - unsubscribe\n" +
-        "Send: RESET - start over";
+        "Send: RESET - start over\n\n" +
+        "Tamil: நம்ம பயிர் பெயர் அனுப்புங்க (eg: tomato, onion)\n" +
+        "SUBSCRIBE tomato - தினசரி அலர்ட் பெறலாம்";
       twiml.message(reply);
       await logWhatsAppExchange(phone, messageBody, reply);
       return res.type("text/xml").send(twiml.toString());
@@ -167,6 +214,55 @@ const whatsappWebhook = async (req, res) => {
     if (upperMessage === "RESET" || upperMessage === "CANCEL") {
       await clearSession(phone);
       const reply = "Reset done. Send crop name to start again.";
+      twiml.message(reply);
+      await logWhatsAppExchange(phone, messageBody, reply);
+      return res.type("text/xml").send(twiml.toString());
+    }
+
+    if (upperMessage.startsWith("BEST ")) {
+      const cityName = messageBody.slice(5).trim();
+      if (!cityName) {
+        const reply = "Send: BEST {city}\nExample: BEST Coimbatore";
+        twiml.message(reply);
+        await logWhatsAppExchange(phone, messageBody, reply);
+        return res.type("text/xml").send(twiml.toString());
+      }
+      const bestRows = await fetchBestMandiForCropInDistrict("", cityName);
+      if (!bestRows.length) {
+        const reply = `No data found for ${cityName} today. Try another city.`;
+        twiml.message(reply);
+        await logWhatsAppExchange(phone, messageBody, reply);
+        return res.type("text/xml").send(twiml.toString());
+      }
+      const lines = bestRows
+        .map((r, i) => `${i + 1}. ${r.crop_name} at ${r.mandi_name}: Rs ${Number(r.modal_price).toLocaleString("en-IN")}/Qtl`)
+        .join("\n");
+      const reply = `🏆 Best prices in ${cityName} today:\n${lines}`;
+      twiml.message(reply);
+      await logWhatsAppExchange(phone, messageBody, reply);
+      return res.type("text/xml").send(twiml.toString());
+    }
+
+    if (upperMessage.startsWith("TOP ")) {
+      const cityName = messageBody.slice(4).trim();
+      if (!cityName) {
+        const reply = "Send: TOP {city}\nExample: TOP Erode";
+        twiml.message(reply);
+        await logWhatsAppExchange(phone, messageBody, reply);
+        return res.type("text/xml").send(twiml.toString());
+      }
+      const topRows = await fetchBestCropsForDistrict(cityName);
+      if (!topRows.length) {
+        const reply = `No data found for ${cityName} today.`;
+        twiml.message(reply);
+        await logWhatsAppExchange(phone, messageBody, reply);
+        return res.type("text/xml").send(twiml.toString());
+      }
+      const lines = topRows
+        .slice(0, 3)
+        .map((r, i) => `${i + 1}. ${r.crop_name} - Rs ${Number(r.modal_price).toLocaleString("en-IN")}/Qtl (${r.mandi_name})`)
+        .join("\n");
+      const reply = `📊 Top crops in ${cityName} today:\n${lines}\n\nSend SUBSCRIBE {crop} to get daily alerts.`;
       twiml.message(reply);
       await logWhatsAppExchange(phone, messageBody, reply);
       return res.type("text/xml").send(twiml.toString());

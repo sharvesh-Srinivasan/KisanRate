@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { subscribeWhatsapp } from "../api";
+import { useLang } from "../i18n";
 
 const WA_ICON = (
   <svg width="22" height="22" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -16,12 +17,16 @@ const WhatsAppCTA = ({
   sandboxNumber,
   joinCode
 }) => {
+  const { t } = useLang();
   const [form, setForm] = useState({ name: "", phone: "", crop: "", mandi: "" });
   const [status, setStatus] = useState("");
   const [statusType, setStatusType] = useState("idle"); // idle | success | error
   const [sending, setSending] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showFloating, setShowFloating] = useState(false);
+  // One-tap signup state
+  const [quickCrop, setQuickCrop] = useState("");
+  const [quickDistrict, setQuickDistrict] = useState("");
 
   const resolvedNumber = sandboxNumber || process.env.REACT_APP_WHATSAPP_SANDBOX_NUMBER || "+14155238886";
   const resolvedJoinCode = joinCode || process.env.REACT_APP_WHATSAPP_JOIN_CODE || "";
@@ -116,12 +121,12 @@ const WhatsAppCTA = ({
                 <div className="wa-icon-badge">{WA_ICON}</div>
               </div>
               <div>
-                <p className="wa-eyebrow">WhatsApp alerts</p>
+                <p className="wa-eyebrow">{t("wa_eyebrow")}</p>
                 <h2 className="wa-heading">
-                  Get mandi prices delivered to your WhatsApp — daily.
+                  {t("wa_heading")}
                 </h2>
                 <p className="wa-sub">
-                  Subscribe once. Receive crop price updates and AI predictions every morning — no app needed.
+                  {t("wa_sub")}
                 </p>
               </div>
             </div>
@@ -134,7 +139,7 @@ const WhatsAppCTA = ({
                 aria-haspopup="dialog"
               >
                 <span className="wa-details-btn-icon">{WA_ICON}</span>
-                View details
+                {t("wa_view_details")}
               </button>
               <a
                 href={waUrl}
@@ -143,7 +148,7 @@ const WhatsAppCTA = ({
                 className="wa-chat-btn"
               >
                 <span className="wa-chat-icon">{WA_ICON}</span>
-                Chat now on WhatsApp
+                {t("wa_chat_now")}
               </a>
             </div>
           </div>
@@ -153,39 +158,86 @@ const WhatsAppCTA = ({
 
           {/* ── Bottom: subscription form ── */}
           <div className="wa-form-section">
+            {/* ── One-tap Quick Signup ── */}
+            <div className="mb-6 p-5 bg-emerald-50/80 border border-emerald-200 rounded-2xl">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-lg">⚡</span>
+                <h3 className="font-bold text-emerald-800 text-base">{t("wa_quick_signup")}</h3>
+              </div>
+              <p className="text-emerald-700 text-sm mb-3">{t("wa_quick_desc")}</p>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <select
+                  className="flex-1 border border-emerald-300 rounded-xl px-3 py-2.5 bg-white text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none"
+                  value={quickCrop}
+                  onChange={(e) => setQuickCrop(e.target.value)}
+                >
+                  <option value="">{t("wa_select_crop")}</option>
+                  {crops.map((c) => (
+                    <option key={c.id} value={c.name}>{c.name}</option>
+                  ))}
+                </select>
+                <select
+                  className="flex-1 border border-emerald-300 rounded-xl px-3 py-2.5 bg-white text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none"
+                  value={quickDistrict}
+                  onChange={(e) => setQuickDistrict(e.target.value)}
+                >
+                  <option value="">{t("wa_select_district")}</option>
+                  {[...new Set(mandis.map((m) => m.district))].filter(Boolean).sort().map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+                <a
+                  href={quickCrop
+                    ? `https://wa.me/${String(resolvedNumber).replace(/\D/g, "")}?text=${encodeURIComponent(`SUBSCRIBE ${quickCrop}`)}`
+                    : "#"}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  onClick={(e) => { if (!quickCrop) e.preventDefault(); }}
+                  className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition ${
+                    quickCrop
+                      ? "bg-green-600 text-white hover:bg-green-700"
+                      : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                  }`}
+                >
+                  {WA_ICON}
+                  {t("wa_open_whatsapp")}
+                </a>
+              </div>
+            </div>
+
             <div className="wa-form-header">
               <div>
-                <h3 className="wa-form-title">Subscribe for daily price alerts</h3>
+                <h3 className="wa-form-title">{t("wa_form_title")}</h3>
                 <p className="wa-form-note">
-                  Sandbox users only — make sure you've joined the Twilio WhatsApp sandbox first.
+                  {t("wa_form_note")}
                 </p>
               </div>
-              <div className="wa-form-badge">Free</div>
+              <div className="wa-form-badge">{t("wa_free")}</div>
             </div>
 
             {!formReady && (
-              <div className="wa-loading-note">Loading crop and mandi options…</div>
+              <div className="wa-loading-note">{t("wa_loading")}</div>
             )}
 
             <form className="wa-form" onSubmit={handleSubmit} noValidate>
               <div className="wa-form-grid">
                 <div className="wa-field">
-                  <label className="wa-label" htmlFor="wa-name">Name (optional)</label>
+                  <label className="wa-label" htmlFor="wa-name">{t("wa_name")}</label>
                   <input
                     id="wa-name"
                     className="wa-input"
-                    placeholder="Your name"
+                    placeholder={t("wa_name_ph")}
                     value={form.name}
                     autoComplete="name"
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
                   />
                 </div>
                 <div className="wa-field">
-                  <label className="wa-label" htmlFor="wa-phone">WhatsApp number *</label>
+                  <label className="wa-label" htmlFor="wa-phone">{t("wa_phone")}</label>
                   <input
                     id="wa-phone"
                     className="wa-input"
-                    placeholder="10-digit number"
+                    placeholder={t("wa_phone_ph")}
                     value={form.phone}
                     type="tel"
                     inputMode="tel"
@@ -194,28 +246,28 @@ const WhatsAppCTA = ({
                   />
                 </div>
                 <div className="wa-field">
-                  <label className="wa-label" htmlFor="wa-crop">Crop *</label>
+                  <label className="wa-label" htmlFor="wa-crop">{t("wa_crop")}</label>
                   <select
                     id="wa-crop"
                     className="wa-input wa-select"
                     value={form.crop}
                     onChange={(e) => setForm({ ...form, crop: e.target.value })}
                   >
-                    <option value="">Select crop</option>
+                    <option value="">{t("wa_select_crop")}</option>
                     {cropOptions.map((c) => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                   </select>
                 </div>
                 <div className="wa-field">
-                  <label className="wa-label" htmlFor="wa-mandi">Mandi *</label>
+                  <label className="wa-label" htmlFor="wa-mandi">{t("wa_mandi")}</label>
                   <select
                     id="wa-mandi"
                     className="wa-input wa-select"
                     value={form.mandi}
                     onChange={(e) => setForm({ ...form, mandi: e.target.value })}
                   >
-                    <option value="">Select mandi</option>
+                    <option value="">{t("wa_select_mandi")}</option>
                     {mandiOptions.map((m) => (
                       <option key={m.id} value={m.id}>{m.label}</option>
                     ))}
@@ -230,12 +282,12 @@ const WhatsAppCTA = ({
                 {sending ? (
                   <>
                     <span className="wa-spinner" aria-hidden="true" />
-                    Subscribing…
+                    {t("wa_subscribing")}
                   </>
                 ) : (
                   <>
                     <span className="wa-submit-icon">{WA_ICON}</span>
-                    Subscribe via WhatsApp
+                    {t("wa_subscribe_btn")}
                   </>
                 )}
               </button>

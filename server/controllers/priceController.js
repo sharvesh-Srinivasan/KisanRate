@@ -454,6 +454,68 @@ const clearStalePredictions = async (req, res) => {
   }
 };
 
+const reportPrice = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reported_price, reason } = req.body || {};
+
+    if (!id) {
+      return res.status(400).json({ success: false, data: null, message: "Price ID required" });
+    }
+
+    await db.query(
+      `CREATE TABLE IF NOT EXISTS price_reports (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        price_id INT NOT NULL,
+        reported_price DECIMAL(10,2),
+        reason TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`
+    );
+
+    await db.query(
+      "INSERT INTO price_reports (price_id, reported_price, reason) VALUES (?, ?, ?)",
+      [id, reported_price || null, reason || null]
+    );
+
+    return res.json({ success: true, data: null, message: "Report submitted" });
+  } catch (error) {
+    logWarn(`Report price failed: ${error.message}`);
+    return res.status(500).json({ success: false, data: null, message: "Failed to submit report" });
+  }
+};
+
+const getPriceReports = async (req, res) => {
+  try {
+    // Ensure table exists before querying
+    await db.query(
+      `CREATE TABLE IF NOT EXISTS price_reports (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        price_id INT NOT NULL,
+        reported_price DECIMAL(10,2),
+        reason TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`
+    );
+
+    const [rows] = await db.query(
+      `SELECT pr.id, pr.price_id, pr.reported_price, pr.reason, pr.created_at,
+              c.name AS crop_name, m.name AS mandi_name, p.modal_price AS current_price, p.price_date
+       FROM price_reports pr
+       JOIN prices p ON pr.price_id = p.id
+       JOIN crops c ON p.crop_id = c.id
+       JOIN mandis m ON p.mandi_id = m.id
+       ORDER BY pr.created_at DESC
+       LIMIT 200`
+    );
+
+    return res.json({ success: true, data: rows, message: "Reports fetched" });
+  } catch (error) {
+    logWarn(`Get price reports failed: ${error.message}`);
+    return res.status(500).json({ success: false, data: null, message: "Failed to fetch reports" });
+  }
+};
+
 module.exports = {
   getPrices,
   getPriceHistory,
@@ -463,5 +525,7 @@ module.exports = {
   refreshPredictions,
   predictTodayForState,
   clearStalePredictions,
-  getAnalytics
+  getAnalytics,
+  reportPrice,
+  getPriceReports
 };

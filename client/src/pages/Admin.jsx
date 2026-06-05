@@ -9,7 +9,8 @@ import {
   triggerTestAlert,
   manualPriceAdd,
   refreshPredictions,
-  clearStalePredictions
+  clearStalePredictions,
+  getPriceReports
 } from "../api";
 import {
   Trash2,
@@ -69,7 +70,8 @@ const NAV_ITEMS = [
   { id: "analytics", label: "Analytics", icon: BarChart3 },
   { id: "farmers", label: "Farmers", icon: Users },
   { id: "logs", label: "WhatsApp Logs", icon: MessageSquare },
-  { id: "alerts", label: "Alerts", icon: Bell }
+  { id: "alerts", label: "Alerts", icon: Bell },
+  { id: "reports", label: "Price Reports", icon: AlertCircle }
 ];
 
 // ── Admin ────────────────────────────────────────────────────────────────────
@@ -79,6 +81,7 @@ const Admin = ({ loading = false, error = null }) => {
   const [prices, setPrices] = useState([]);
   const [farmers, setFarmers] = useState([]);
   const [logs, setLogs] = useState([]);
+  const [reports, setReports] = useState([]);
   const [loadingState, setLoadingState] = useState(false);
   const [tabError, setTabError] = useState("");
   const [logPage, setLogPage] = useState(1);
@@ -118,6 +121,10 @@ const Admin = ({ loading = false, error = null }) => {
         if (activeTab === "logs") {
           const res = await getWhatsappLogs();
           setLogs(res.data || []);
+        }
+        if (activeTab === "reports") {
+          const res = await getPriceReports();
+          setReports(res.data || []);
         }
       } catch {
         setTabError("Failed to load data for this tab.");
@@ -318,6 +325,7 @@ const Admin = ({ loading = false, error = null }) => {
               {activeTab === "farmers" && "Farmer subscriptions and contacts"}
               {activeTab === "logs" && "WhatsApp conversation history"}
               {activeTab === "alerts" && "Send and test notification alerts"}
+              {activeTab === "reports" && "Farmer-submitted price corrections"}
             </p>
           </div>
           <div className="text-sm text-white/40">
@@ -575,6 +583,57 @@ const Admin = ({ loading = false, error = null }) => {
                 >
                   Next <ChevronRight size={14} />
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── Reports tab ──────────────────────────────────── */}
+          {activeTab === "reports" && (
+            <div className="space-y-4">
+              <div className="admin-table-card">
+                <div className="admin-table-header">
+                  <span>Farmer Price Reports</span>
+                  <span className="admin-table-badge">{reports.length} reports</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Crop</th>
+                        <th>Mandi</th>
+                        <th>Current Price</th>
+                        <th>Reported Price</th>
+                        <th>Reason</th>
+                        <th>Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reports.length === 0 && (
+                        <tr><td colSpan={6} className="text-center text-white/40 py-8">No reports submitted yet.</td></tr>
+                      )}
+                      {reports.map((report) => (
+                        <tr key={report.id}>
+                          <td className="font-medium text-white">{report.crop_name}</td>
+                          <td className="text-white/60">{report.mandi_name}</td>
+                          <td>
+                            <span className="admin-price-chip">
+                              ₹{Number(report.current_price).toLocaleString("en-IN")}
+                            </span>
+                          </td>
+                          <td>
+                            {report.reported_price ? (
+                              <span className="admin-predicted-chip">
+                                ₹{Number(report.reported_price).toLocaleString("en-IN")}
+                              </span>
+                            ) : <span className="text-white/30">—</span>}
+                          </td>
+                          <td className="text-white/60 max-w-xs truncate text-xs">{report.reason || "—"}</td>
+                          <td className="text-white/40 text-xs">{new Date(report.created_at).toLocaleDateString("en-IN")}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}

@@ -121,3 +121,79 @@ export const getPriceReports = async () => {
   const response = await apiClient.get("/api/prices/reports");
   return response.data;
 };
+
+// ── Farmer Auth ─────────────────────────────────────────────────────────────
+
+export const farmerSendOtp = async (phone) => {
+  const response = await apiClient.post("/api/farmer-auth/send-otp", { phone });
+  return response.data;
+};
+
+export const farmerVerifyOtp = async (phone, otp, name, district) => {
+  const response = await apiClient.post("/api/farmer-auth/verify-otp", {
+    phone,
+    otp,
+    name,
+    district
+  });
+  return response.data;
+};
+
+export const getFarmerProfile = async () => {
+  const token = localStorage.getItem("kisanrate_farmer_token");
+  const response = await apiClient.get("/api/farmer-auth/profile", {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return response.data;
+};
+
+export const updateFarmerProfile = async (data) => {
+  const token = localStorage.getItem("kisanrate_farmer_token");
+  const response = await apiClient.patch("/api/farmer-auth/profile", data, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return response.data;
+};
+
+// ── Farmer Stock ─────────────────────────────────────────────────────────────
+
+const farmerHeaders = () => ({
+  Authorization: `Bearer ${localStorage.getItem("kisanrate_farmer_token")}`
+});
+
+export const getFarmerStock = async () => {
+  const response = await apiClient.get("/api/farmer/stock", { headers: farmerHeaders() });
+  return response.data;
+};
+
+export const addFarmerStock = async (data) => {
+  const response = await apiClient.post("/api/farmer/stock", data, { headers: farmerHeaders() });
+  return response.data;
+};
+
+export const updateFarmerStock = async (id, data) => {
+  const response = await apiClient.patch(`/api/farmer/stock/${id}`, data, {
+    headers: farmerHeaders()
+  });
+  return response.data;
+};
+
+export const deleteFarmerStock = async (id) => {
+  const response = await apiClient.delete(`/api/farmer/stock/${id}`, {
+    headers: farmerHeaders()
+  });
+  return response.data;
+};
+
+export const getFarmerPortfolio = async () => {
+  const response = await apiClient.get("/api/farmer/portfolio", { headers: farmerHeaders() });
+  return response.data;
+};
+
+export const getFarmerSellAdvice = async (params) => {
+  const response = await apiClient.get("/api/farmer/sell-advice", {
+    headers: farmerHeaders(),
+    params
+  });
+  return response.data;
+};

@@ -11,6 +11,8 @@ const db = require("./config/db");
 const { initSocket } = require("./socket/socketHandler");
 const priceRoutes = require("./routes/priceRoutes");
 const farmerRoutes = require("./routes/farmerRoutes");
+const farmerAuthRoutes = require("./routes/farmerAuthRoutes");
+const farmerStockRoutes = require("./routes/farmerStockRoutes");
 const alertRoutes = require("./routes/alertRoutes");
 const whatsappRoutes = require("./routes/whatsappRoutes");
 const pushRoutes = require("./routes/pushRoutes");
@@ -88,6 +90,44 @@ const ensurePushSubscriptionsTable = async () => {
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )`
   );
+};
+
+const ensureFarmerPortalTables = async () => {
+  // OTP store — one row per phone, upserted on each request
+  await db.query(
+    `CREATE TABLE IF NOT EXISTS farmer_otp (
+      phone VARCHAR(20) PRIMARY KEY,
+      otp_hash VARCHAR(255) NOT NULL,
+      expires_at DATETIME NOT NULL
+    )`
+  );
+
+  // Personal crop warehouse
+  await db.query(
+    `CREATE TABLE IF NOT EXISTS farmer_stock (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      farmer_id INT NOT NULL,
+      crop_id INT NOT NULL,
+      quantity_quintals DECIMAL(10,2) NOT NULL,
+      harvest_date DATE,
+      storage_location VARCHAR(200),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (farmer_id) REFERENCES farmers(id) ON DELETE CASCADE,
+      FOREIGN KEY (crop_id) REFERENCES crops(id)
+    )`
+  );
+
+  // Add district column to farmers if missing
+  const [districtCol] = await db.query(
+    `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'farmers' AND COLUMN_NAME = 'district'`,
+    [process.env.DB_NAME]
+  );
+  if (!districtCol.length) {
+    await db.query("ALTER TABLE farmers ADD COLUMN district VARCHAR(100)");
+  }
+
+  logInfo("Farmer portal tables ensured");
 };
 
 const ensureAdminUser = async () => {
@@ -185,6 +225,8 @@ app.post("/api/auth/login", async (req, res) => {
 
 app.use("/api/prices", priceRoutes);
 app.use("/api/farmers", farmerRoutes);
+app.use("/api/farmer-auth", farmerAuthRoutes);
+app.use("/api/farmer", farmerStockRoutes);
 app.use("/api/alerts", alertRoutes);
 app.use("/api/whatsapp", whatsappRoutes);
 app.use("/api/push", pushRoutes);
@@ -203,6 +245,10 @@ ensureWhatsAppSessionsTable().catch((error) => {
 
 ensurePushSubscriptionsTable().catch((error) => {
   logWarn(`Push subscriptions table setup failed: ${error.message}`);
+});
+
+ensureFarmerPortalTables().catch((error) => {
+  logWarn(`Farmer portal tables setup failed: ${error.message}`);
 });
 
 ensureAdminUser().catch((error) => {

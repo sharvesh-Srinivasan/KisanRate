@@ -74,6 +74,7 @@ const Navbar = ({ loading = false, error = null }) => {
         <div className="hidden md:flex items-center gap-4 text-text-muted font-medium">
           <a className="hover:text-primary transition" href="#prices">{t("home")}</a>
           <a className="hover:text-primary transition" href="#about">{t("why_kisanrate")}</a>
+          <a className="hover:text-primary transition" href="/farmer/login">Farmer Portal</a>
           <a className="hover:text-primary transition" href="/login">{t("admin")}</a>
           <a className="hover:text-primary transition" href="#whatsapp">WhatsApp</a>
 
@@ -160,6 +161,7 @@ const Navbar = ({ loading = false, error = null }) => {
         <div className="md:hidden bg-white/90 backdrop-blur border-t border-border/70 px-6 py-4 space-y-3 text-text-muted">
           <a className="block hover:text-primary transition" href="#prices">{t("home")}</a>
           <a className="block hover:text-primary transition" href="#about">{t("why_kisanrate")}</a>
+          <a className="block hover:text-primary transition" href="/farmer/login">Farmer Portal</a>
           <a className="block hover:text-primary transition" href="/login">{t("admin")}</a>
           <a className="block hover:text-primary transition" href="#whatsapp">WhatsApp</a>
           <a className="block mt-2" href={waUrl} target="_blank" rel="noreferrer noopener">

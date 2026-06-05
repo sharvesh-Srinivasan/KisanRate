@@ -21,15 +21,11 @@ const sendOtp = async (phone, otp) => {
   }
 
   try {
-    const message = `Your KisanRate OTP is ${otp}. Valid for 5 minutes. Do not share with anyone.`;
-
     const response = await axios.post(
       "https://www.fast2sms.com/dev/bulkV2",
       {
-        route: "q",              // quick/transactional route
-        message,
-        language: "english",
-        flash: 0,
+        route: "otp",
+        variables_values: String(otp),
         numbers: phone
       },
       {

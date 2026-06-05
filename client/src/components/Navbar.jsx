@@ -12,15 +12,20 @@ const WA_ICON = (
 const Navbar = ({ loading = false, error = null }) => {
   const [open, setOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
-  const langRef = useRef(null);
+  const desktopLangRef = useRef(null);
+  const mobileLangRef = useRef(null);
   const { lang, setLang, t } = useLang();
 
   // Close lang dropdown on outside click
   useEffect(() => {
     const handler = (e) => {
-      if (langRef.current && !langRef.current.contains(e.target)) {
-        setLangOpen(false);
+      if (
+        (desktopLangRef.current && desktopLangRef.current.contains(e.target)) ||
+        (mobileLangRef.current && mobileLangRef.current.contains(e.target))
+      ) {
+        return;
       }
+      setLangOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -73,7 +78,7 @@ const Navbar = ({ loading = false, error = null }) => {
           <a className="hover:text-primary transition" href="#whatsapp">WhatsApp</a>
 
           {/* ── Language Toggle ── */}
-          <div className="relative" ref={langRef}>
+          <div className="relative" ref={desktopLangRef}>
             <button
               type="button"
               onClick={() => setLangOpen((p) => !p)}
@@ -115,7 +120,7 @@ const Navbar = ({ loading = false, error = null }) => {
 
         <div className="flex md:hidden items-center gap-3">
           {/* Mobile language toggle */}
-          <div className="relative" ref={langRef}>
+          <div className="relative" ref={mobileLangRef}>
             <button
               type="button"
               onClick={() => setLangOpen((p) => !p)}

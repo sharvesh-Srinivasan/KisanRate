@@ -366,15 +366,13 @@ const Home = ({ loading = false, error = null }) => {
         </section>
 
         <section className="max-w-6xl mx-auto px-6 mt-6">
-          <div className="glass-panel rounded-2xl">
-            <FilterBar
-              filters={filters}
-              states={states}
-              districts={districts}
-              crops={crops.length ? crops.map((crop) => crop.name) : fallbackCrops}
-              onFilterChange={setFilters}
-            />
-          </div>
+          <FilterBar
+            filters={filters}
+            states={states}
+            districts={districts}
+            crops={crops.length ? crops.map((crop) => crop.name) : fallbackCrops}
+            onFilterChange={setFilters}
+          />
         </section>
 
         <section className="max-w-6xl mx-auto px-6 mt-4">
@@ -685,14 +683,14 @@ const Home = ({ loading = false, error = null }) => {
         isOpen={isSmartSellOpen}
         onClose={() => setIsSmartSellOpen(false)}
         prices={prices}
-        crops={crops}
+        crops={crops.length ? crops.map(c => c.name) : fallbackCrops}
         districts={TAMIL_NADU_DISTRICTS}
       />
 
       {/* ── Floating Easy Sell Button ── */}
       <button
         onClick={() => setIsSmartSellOpen(true)}
-        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-5 py-3.5 bg-gradient-to-r from-primary to-[#2d5222] text-white font-bold rounded-full shadow-[0_8px_30px_rgba(59,110,47,0.4)] hover:shadow-[0_12px_40px_rgba(59,110,47,0.5)] hover:-translate-y-1 transition-all duration-300 border border-white/20 group"
+        className="fixed bottom-6 left-6 z-40 flex items-center gap-2 px-5 py-3.5 bg-gradient-to-r from-primary to-[#2d5222] text-white font-bold rounded-full shadow-[0_8px_30px_rgba(59,110,47,0.4)] hover:shadow-[0_12px_40px_rgba(59,110,47,0.5)] hover:-translate-y-1 transition-all duration-300 border border-white/20 group"
       >
         <span className="text-xl group-hover:scale-110 transition-transform">💰</span>
         {t("smart_sell_btn")}

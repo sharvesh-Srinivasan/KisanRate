@@ -21,24 +21,21 @@ const FilterBar = ({
 
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto px-6 py-4">
-        <div className="filter-bar-skeleton" />
-      </div>
+      <div className="filter-bar-skeleton w-full" />
     );
   }
 
   if (error) {
     return (
-      <div className="max-w-6xl mx-auto px-6 py-3 text-danger text-sm">
+      <div className="text-danger text-sm py-2">
         {error}
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-6 pb-4">
-      <div className="filter-bar-card">
-        {/* Left: label */}
+    <div className="filter-bar-card w-full">
+      {/* Left: label */}
         <div className="filter-bar-label">
           <div className="filter-icon-dot">
             <Leaf size={14} />
@@ -158,7 +155,6 @@ const FilterBar = ({
           </div>
         )}
       </div>
-    </div>
   );
 };
 

@@ -81,8 +81,6 @@ const FarmerLogin = () => {
   const [step, setStep] = useState("phone"); // "phone" | "otp" | "profile"
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
-  const [name, setName] = useState("");
-  const [district, setDistrict] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -160,7 +158,7 @@ const FarmerLogin = () => {
     setError("");
     try {
       const digits = phone.replace(/\D/g, "").replace(/^91/, "").slice(-10);
-      const res = await farmerVerifyOtp(digits, otp, name || null, district || null);
+      const res = await farmerVerifyOtp(digits, otp, null, null);
       if (res.success) {
         localStorage.setItem("kisanrate_farmer_token", res.data.token);
         localStorage.setItem("kisanrate_farmer", JSON.stringify(res.data.farmer));

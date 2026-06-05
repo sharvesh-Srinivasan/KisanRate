@@ -72,9 +72,12 @@ const sendOtpHandler = async (req, res) => {
 
     return res.json({
       success: true,
-      data: { devMode: result.devMode },
+      data: { 
+        devMode: result.devMode,
+        demoOtp: result.devMode ? otp : undefined 
+      },
       message: result.devMode
-        ? "OTP printed to server console (dev mode — set FAST2SMS_API_KEY to enable SMS)"
+        ? "Demo Mode Active. Check the alert to see your OTP."
         : "OTP sent to your mobile number"
     });
   } catch (error) {

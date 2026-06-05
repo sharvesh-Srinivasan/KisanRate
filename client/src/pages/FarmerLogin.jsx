@@ -121,6 +121,14 @@ const FarmerLogin = () => {
         setSuccessMsg(res.message);
         setCooldown(60);
         setStep("otp");
+        
+        // Auto-fill and alert in Demo Mode
+        if (res.data?.demoOtp) {
+          setTimeout(() => {
+            alert(`🚜 PORTFOLIO DEMO MODE\n\nYour OTP is: ${res.data.demoOtp}`);
+            setOtp(res.data.demoOtp);
+          }, 400);
+        }
       } else {
         setError(res.message || "Failed to send OTP");
         triggerShake();
@@ -174,6 +182,13 @@ const FarmerLogin = () => {
         setDevMode(res.data?.devMode || false);
         setSuccessMsg("New OTP sent!");
         setCooldown(60);
+        
+        if (res.data?.demoOtp) {
+          setTimeout(() => {
+            alert(`🚜 PORTFOLIO DEMO MODE\n\nYour new OTP is: ${res.data.demoOtp}`);
+            setOtp(res.data.demoOtp);
+          }, 400);
+        }
       } else {
         setError(res.message);
       }
@@ -321,7 +336,7 @@ const FarmerLogin = () => {
 
               {devMode && (
                 <div className="farmer-login-devmode-banner">
-                  🛠 Dev Mode: OTP printed to server console (no SMS sent)
+                  🛠 Portfolio Demo Mode: SMS bypassed. OTP has been auto-filled.
                 </div>
               )}
 

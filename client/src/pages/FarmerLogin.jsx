@@ -268,35 +268,6 @@ const FarmerLogin = () => {
                   </div>
                 </div>
 
-                {/* Optional: Name & District (filled once here or on profile page) */}
-                <div className="farmer-login-field">
-                  <label className="farmer-login-label" htmlFor="farmer-name">
-                    Your Name <span className="farmer-login-optional">(optional)</span>
-                  </label>
-                  <input
-                    id="farmer-name"
-                    type="text"
-                    className="farmer-login-input"
-                    placeholder="e.g. Ramesh Kumar"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                </div>
-
-                <div className="farmer-login-field">
-                  <label className="farmer-login-label" htmlFor="farmer-district">
-                    District <span className="farmer-login-optional">(optional)</span>
-                  </label>
-                  <input
-                    id="farmer-district"
-                    type="text"
-                    className="farmer-login-input"
-                    placeholder="e.g. Coimbatore"
-                    value={district}
-                    onChange={(e) => setDistrict(e.target.value)}
-                  />
-                </div>
-
                 {error && (
                   <div className="farmer-login-error" role="alert">
                     <span className="farmer-login-error-dot" />

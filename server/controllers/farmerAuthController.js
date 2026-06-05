@@ -156,16 +156,9 @@ const verifyOtpHandler = async (req, res) => {
 
     if (existingFarmer.length) {
       farmerId = existingFarmer[0].id;
-      farmerName = name || existingFarmer[0].name;
-      farmerDistrict = district || existingFarmer[0].district;
-
-      await db.query(
-        `UPDATE farmers SET
-           name = COALESCE(?, name),
-           district = COALESCE(?, district)
-         WHERE id = ?`,
-        [name || null, district || null, farmerId]
-      );
+      farmerName = existingFarmer[0].name;
+      farmerDistrict = existingFarmer[0].district;
+      // Do not overwrite existing profile details on login
     } else {
       const [result] = await db.query(
         `INSERT INTO farmers (phone, name, district, subscribed) VALUES (?, ?, ?, TRUE)`,

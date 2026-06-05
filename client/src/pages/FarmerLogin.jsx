@@ -98,6 +98,13 @@ const FarmerLogin = () => {
     return () => clearTimeout(t);
   }, [cooldown]);
 
+  // Check if already logged in
+  useEffect(() => {
+    if (localStorage.getItem("kisanrate_farmer_token")) {
+      navigate("/farmer/dashboard");
+    }
+  }, [navigate]);
+
   const triggerShake = () => {
     setShake(true);
     setTimeout(() => setShake(false), 600);

@@ -61,24 +61,29 @@ const Navbar = ({ loading = false, error = null }) => {
   return (
     <nav className="fixed top-0 inset-x-0 h-16 bg-white/80 backdrop-blur border-b border-border/70 z-50">
       <div className="max-w-6xl mx-auto h-full flex items-center justify-between px-6">
-        <div className="flex items-center gap-3">
-          <svg width="28" height="28" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <path d="M18 40C18 28 12 18 8 12" stroke="#3B6E2F" strokeWidth="2" strokeLinecap="round" />
-            <path d="M30 40C30 28 36 18 40 12" stroke="#3B6E2F" strokeWidth="2" strokeLinecap="round" />
-            <path d="M16 22C14 18 12 16 10 14" stroke="#3B6E2F" strokeWidth="2" strokeLinecap="round" />
-            <path d="M32 22C34 18 36 16 38 14" stroke="#3B6E2F" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-          <span className="font-display text-soil text-xl font-bold">KisanRate</span>
+        {/* Left: Hamburger & Logo */}
+        <div className="flex items-center gap-4">
+          <button
+            className="text-text-main hover:text-primary transition"
+            onClick={() => setOpen((prev) => !prev)}
+            aria-label="Toggle navigation"
+          >
+            {open ? <X size={26} /> : <Menu size={26} />}
+          </button>
+          
+          <div className="flex items-center gap-3">
+            <svg width="28" height="28" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M18 40C18 28 12 18 8 12" stroke="#3B6E2F" strokeWidth="2" strokeLinecap="round" />
+              <path d="M30 40C30 28 36 18 40 12" stroke="#3B6E2F" strokeWidth="2" strokeLinecap="round" />
+              <path d="M16 22C14 18 12 16 10 14" stroke="#3B6E2F" strokeWidth="2" strokeLinecap="round" />
+              <path d="M32 22C34 18 36 16 38 14" stroke="#3B6E2F" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            <span className="font-display text-soil text-xl font-bold">KisanRate</span>
+          </div>
         </div>
 
-        <div className="hidden md:flex items-center gap-4 text-text-muted font-medium">
-          <a className="hover:text-primary transition" href="#prices">{t("home")}</a>
-          <a className="hover:text-primary transition" href="#about">{t("why_kisanrate")}</a>
-          <a className="hover:text-primary transition" href="/farmer/login">Farmer Portal</a>
-          <a className="hover:text-primary transition" href="/login">{t("admin")}</a>
-          <a className="hover:text-primary transition" href="#whatsapp">WhatsApp</a>
-
-          {/* ── Language Toggle ── */}
+        {/* Right: Language Toggle Only */}
+        <div className="flex items-center">
           <div className="relative" ref={desktopLangRef}>
             <button
               type="button"
@@ -86,8 +91,9 @@ const Navbar = ({ loading = false, error = null }) => {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border/70 bg-white/80 hover:bg-white text-text-muted hover:text-primary transition text-sm font-medium"
               aria-label={t("language")}
             >
-              <Globe size={14} />
-              <span>{currentLang.flag} {currentLang.label}</span>
+              <Globe size={16} />
+              <span className="hidden sm:inline">{currentLang.flag} {currentLang.label}</span>
+              <span className="sm:hidden">{currentLang.flag}</span>
             </button>
             {langOpen && (
               <div className="absolute right-0 top-full mt-2 bg-white border border-border/70 rounded-xl shadow-lg py-1 w-40 z-50">
@@ -106,68 +112,23 @@ const Navbar = ({ loading = false, error = null }) => {
               </div>
             )}
           </div>
-
-          <a
-            href={waUrl}
-            target="_blank"
-            rel="noreferrer noopener"
-            className="ml-2 inline-flex items-center gap-2 bg-green-600/90 hover:bg-green-700 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-card transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-700"
-            aria-label="Chat on WhatsApp"
-          >
-            {WA_ICON}
-            WhatsApp
-          </a>
-        </div>
-
-        <div className="flex md:hidden items-center gap-3">
-          {/* Mobile language toggle */}
-          <div className="relative" ref={mobileLangRef}>
-            <button
-              type="button"
-              onClick={() => setLangOpen((p) => !p)}
-              className="flex items-center gap-1 px-2 py-1.5 rounded-lg border border-border/70 text-text-muted text-sm"
-            >
-              <Globe size={13} />
-              <span>{currentLang.flag}</span>
-            </button>
-            {langOpen && (
-              <div className="absolute right-0 top-full mt-2 bg-white border border-border/70 rounded-xl shadow-lg py-1 w-36 z-50">
-                {LANGUAGES.map((l) => (
-                  <button
-                    key={l.code}
-                    type="button"
-                    onClick={() => { setLang(l.code); setLangOpen(false); }}
-                    className={`w-full text-left px-4 py-2 text-sm hover:bg-accent-light transition flex items-center gap-2 ${lang === l.code ? "text-primary font-semibold" : "text-text-muted"}`}
-                  >
-                    <span>{l.flag}</span>
-                    <span>{l.label}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <button
-            className="text-text-main"
-            onClick={() => setOpen((prev) => !prev)}
-            aria-label="Toggle navigation"
-          >
-            {open ? <X size={22} /> : <Menu size={22} />}
-          </button>
         </div>
       </div>
 
+      {/* Global Dropdown Menu */}
       {open && (
-        <div className="md:hidden bg-white/90 backdrop-blur border-t border-border/70 px-6 py-4 space-y-3 text-text-muted">
-          <a className="block hover:text-primary transition" href="#prices">{t("home")}</a>
-          <a className="block hover:text-primary transition" href="#about">{t("why_kisanrate")}</a>
-          <a className="block hover:text-primary transition" href="/farmer/login">Farmer Portal</a>
-          <a className="block hover:text-primary transition" href="/login">{t("admin")}</a>
-          <a className="block hover:text-primary transition" href="#whatsapp">WhatsApp</a>
-          <a className="block mt-2" href={waUrl} target="_blank" rel="noreferrer noopener">
-            <div className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-full text-sm font-semibold">
+        <div className="bg-white/95 backdrop-blur-md border-t border-border/70 px-6 py-5 shadow-xl w-full sm:w-80 absolute left-0 flex flex-col gap-4 text-text-muted">
+          <a className="block text-lg font-medium hover:text-primary transition" onClick={() => setOpen(false)} href="#prices">{t("home")}</a>
+          <a className="block text-lg font-medium hover:text-primary transition" onClick={() => setOpen(false)} href="#about">{t("why_kisanrate")}</a>
+          <a className="block text-lg font-medium hover:text-primary transition" onClick={() => setOpen(false)} href="/farmer/login">Farmer Portal</a>
+          <a className="block text-lg font-medium hover:text-primary transition" onClick={() => setOpen(false)} href="/login">{t("admin")}</a>
+          
+          <div className="h-px bg-border/50 my-2" />
+          
+          <a className="inline-block mt-2" href={waUrl} target="_blank" rel="noreferrer noopener" onClick={() => setOpen(false)}>
+            <div className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-5 py-3 rounded-full text-base font-semibold shadow-md transition-transform hover:scale-105">
               {WA_ICON}
-              WhatsApp updates
+              Get WhatsApp Updates
             </div>
           </a>
         </div>

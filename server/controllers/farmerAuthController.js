@@ -66,15 +66,23 @@ const sendOtpHandler = async (req, res) => {
       [normalized, otpHash, expiresAt]
     );
 
+    // Check if new user
+    const [existingFarmer] = await db.query(
+      "SELECT id FROM farmers WHERE phone = ? LIMIT 1",
+      [normalized]
+    );
+    const isNewUser = existingFarmer.length === 0;
+
     const result = await sendOtp(normalized, otp);
 
-    logInfo(`OTP ${result.devMode ? "(DEV)" : ""} requested for ${normalized.slice(0, 4)}****`);
+    logInfo(`OTP ${result.devMode ? "(DEV)" : ""} requested for ${normalized.slice(0, 4)}**** (New: ${isNewUser})`);
 
     return res.json({
       success: true,
       data: { 
         devMode: result.devMode,
-        demoOtp: result.devMode ? otp : undefined 
+        demoOtp: result.devMode ? otp : undefined,
+        isNewUser
       },
       message: result.devMode
         ? "Demo Mode Active. Check the alert to see your OTP."

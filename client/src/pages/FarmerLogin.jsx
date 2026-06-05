@@ -81,6 +81,9 @@ const FarmerLogin = () => {
   const [step, setStep] = useState("phone"); // "phone" | "otp" | "profile"
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
+  const [name, setName] = useState("");
+  const [district, setDistrict] = useState("");
+  const [isNewUser, setIsNewUser] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -123,6 +126,7 @@ const FarmerLogin = () => {
       const res = await farmerSendOtp(digits);
       if (res.success) {
         setDevMode(res.data?.devMode || false);
+        setIsNewUser(res.data?.isNewUser || false);
         setSuccessMsg(res.message);
         setCooldown(60);
         setStep("otp");
@@ -158,7 +162,7 @@ const FarmerLogin = () => {
     setError("");
     try {
       const digits = phone.replace(/\D/g, "").replace(/^91/, "").slice(-10);
-      const res = await farmerVerifyOtp(digits, otp, null, null);
+      const res = await farmerVerifyOtp(digits, otp, isNewUser ? name : null, isNewUser ? district : null);
       if (res.success) {
         localStorage.setItem("kisanrate_farmer_token", res.data.token);
         localStorage.setItem("kisanrate_farmer", JSON.stringify(res.data.farmer));
@@ -329,6 +333,37 @@ const FarmerLogin = () => {
                   <label className="farmer-login-label">6-Digit OTP</label>
                   <OtpInput value={otp} onChange={setOtp} />
                 </div>
+
+                {isNewUser && (
+                  <>
+                    <div className="farmer-login-field">
+                      <label className="farmer-login-label" htmlFor="farmer-name">
+                        Your Name <span className="farmer-login-optional">(optional)</span>
+                      </label>
+                      <input
+                        id="farmer-name"
+                        type="text"
+                        className="farmer-login-input"
+                        placeholder="e.g. Ramesh Kumar"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                      />
+                    </div>
+                    <div className="farmer-login-field">
+                      <label className="farmer-login-label" htmlFor="farmer-district">
+                        District <span className="farmer-login-optional">(optional)</span>
+                      </label>
+                      <input
+                        id="farmer-district"
+                        type="text"
+                        className="farmer-login-input"
+                        placeholder="e.g. Coimbatore"
+                        value={district}
+                        onChange={(e) => setDistrict(e.target.value)}
+                      />
+                    </div>
+                  </>
+                )}
 
                 {error && (
                   <div className="farmer-login-error" role="alert">

@@ -37,7 +37,7 @@ const getPrices = async (req, res) => {
     const whereFilter = whereParts.length ? `WHERE ${whereParts.join(" AND ")}` : "";
 
     const [latestRows] = await db.query(
-      `SELECT MAX(p.price_date) AS latest_date
+      `SELECT DATE_FORMAT(MAX(p.price_date), '%Y-%m-%d') AS latest_date
        FROM prices p
        JOIN crops c ON p.crop_id = c.id
        JOIN mandis m ON p.mandi_id = m.id
@@ -243,7 +243,7 @@ const predictTodayForState = async (req, res) => {
     const filters = [`%${state}%`];
 
     const [latestRows] = await db.query(
-      `SELECT MAX(p.price_date) AS latest_date
+      `SELECT DATE_FORMAT(MAX(p.price_date), '%Y-%m-%d') AS latest_date
        FROM prices p
        JOIN crops c ON p.crop_id = c.id
        JOIN mandis m ON p.mandi_id = m.id

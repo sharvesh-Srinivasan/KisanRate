@@ -22,9 +22,9 @@ const SmartSellModal = ({ isOpen, onClose, prices, crops, districts }) => {
 
     if (!form.crop || !form.district || !form.quantity) return;
 
-    // Filter prices for specific crop and district
+    // Filter prices for specific crop (across all of Tamil Nadu)
     const districtPrices = prices.filter(
-      p => p.crop_name === form.crop && p.district === form.district
+      p => p.crop_name === form.crop
     );
 
     if (districtPrices.length === 0) {

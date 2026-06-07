@@ -50,10 +50,11 @@ def predict_price(crop_name: str, mandi_name: str):
     if not rows:
         raise ValueError(f"No price history found for crop='{crop_name}', mandi='{mandi_name}'")
 
-    prices = [float(row["modal_price"]) for row in rows if row["modal_price"]]
-    if not prices:
+    valid_rows = [row for row in rows if row["modal_price"]]
+    if not valid_rows:
         raise ValueError(f"All modal_price values are null/zero for crop='{crop_name}', mandi='{mandi_name}'")
 
+    prices = [float(row["modal_price"]) for row in valid_rows]
     average = float(np.mean(prices))
     if len(prices) < 14:
         # Not enough data for Prophet — return simple average as best estimate
@@ -61,7 +62,7 @@ def predict_price(crop_name: str, mandi_name: str):
 
     df = pd.DataFrame(
         {
-            "ds": [row["price_date"] for row in rows],
+            "ds": [row["price_date"] for row in valid_rows],
             "y": prices,
         }
     )
@@ -72,12 +73,12 @@ def predict_price(crop_name: str, mandi_name: str):
         model = Prophet(daily_seasonality=False, yearly_seasonality=False, uncertainty_samples=50)
         model.fit(df)
 
-        future = model.make_future_dataframe(periods=7)
+        future = model.make_future_dataframe(periods=1)
         forecast = model.predict(future)
         next_day = forecast.tail(1).iloc[0]
-        predicted = float(next_day["yhat"])
-        lower = float(next_day.get("yhat_lower", predicted))
-        upper = float(next_day.get("yhat_upper", predicted))
+        predicted = max(0.0, float(next_day["yhat"]))
+        lower = max(0.0, float(next_day.get("yhat_lower", predicted)))
+        upper = max(0.0, float(next_day.get("yhat_upper", predicted)))
         return predicted, lower, upper
     except Exception as error:
         print(f"Prophet failed: {error}")

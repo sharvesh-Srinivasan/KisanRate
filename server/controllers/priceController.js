@@ -270,26 +270,29 @@ const predictTodayForState = async (req, res) => {
     );
 
     let updated = 0;
-    const batchSize = 3;
-    for (let i = 0; i < rows.length; i += batchSize) {
-      const chunk = rows.slice(i, i + batchSize);
-      await Promise.all(
-        chunk.map(async (row) => {
-          const predicted = await getPrediction(row.crop_name, row.mandi_name);
-          if (predicted && typeof predicted.predicted_price === "number") {
-            await db.query(
-              "UPDATE prices SET predicted_price = ?, predicted_lower = ?, predicted_upper = ?, predicted_at = NOW() WHERE id = ?",
-              [
-                predicted.predicted_price,
-                predicted.predicted_lower ?? predicted.predicted_price,
-                predicted.predicted_upper ?? predicted.predicted_price,
-                row.id
-              ]
-            );
-            updated += 1;
-          }
-        })
-      );
+    const delay = (ms) => new Promise(res => setTimeout(res, ms));
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const predicted = await getPrediction(row.crop_name, row.mandi_name);
+      
+      if (predicted && typeof predicted.predicted_price === "number") {
+        await db.query(
+          "UPDATE prices SET predicted_price = ?, predicted_lower = ?, predicted_upper = ?, predicted_at = NOW() WHERE id = ?",
+          [
+            predicted.predicted_price,
+            predicted.predicted_lower ?? predicted.predicted_price,
+            predicted.predicted_upper ?? predicted.predicted_price,
+            row.id
+          ]
+        );
+        updated += 1;
+      }
+
+      // Add a small delay between requests to prevent overwhelming the ML service (429 errors)
+      if (i < rows.length - 1) {
+        await delay(1000); 
+      }
     }
 
     return res.json({

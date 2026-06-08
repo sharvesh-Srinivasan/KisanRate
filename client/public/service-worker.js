@@ -1,5 +1,5 @@
 /* KisanRate Service Worker — v2 (Offline-first price caching) */
-const CACHE_NAME = "kisanrate-shell-v2";
+const CACHE_NAME = "kisanrate-shell-v3";
 const PRICES_CACHE = "kisanrate-prices-v1";
 
 // App shell files to cache for offline use

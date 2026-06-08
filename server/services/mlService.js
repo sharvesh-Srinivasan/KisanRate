@@ -59,6 +59,7 @@ const getPrediction = async (cropName, mandiName) => {
         const status = error?.response?.status;
         const code = error?.code;
         const isRetryable =
+          status === 429 ||
           status === 502 ||
           status === 503 ||
           status === 504 ||

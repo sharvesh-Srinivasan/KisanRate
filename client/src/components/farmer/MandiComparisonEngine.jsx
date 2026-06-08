@@ -35,17 +35,15 @@ const MandiComparisonEngine = ({ farmerLocation }) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await compareMandis({
-        cropId: formData.cropId,
-        quantity: formData.quantity,
-        latitude: farmerLocation?.lat,
-        longitude: farmerLocation?.lng,
-        district: farmerLocation?.district,
-        state: farmerLocation?.state
+      const response = await compareMandis({
+        crop_id: formData.cropId,
+        quantity_quintals: formData.quantity,
+        farmer_district: farmerLocation?.district,
+        farmer_state: farmerLocation?.state
       });
-      setResults(data.options);
+      setResults(response.data || []);
     } catch (err) {
-      setError(err.response?.data?.error || "Failed to compare mandis");
+      setError(err.response?.data?.message || err.message || "Failed to compare mandis");
     } finally {
       setLoading(false);
     }
@@ -107,27 +105,26 @@ const MandiComparisonEngine = ({ farmerLocation }) => {
       {results && results.length > 0 && (
         <div className="mandi-comp-leaderboard">
           {results.map((mandi, index) => (
-            <div key={mandi.mandiId} className={`mandi-comp-card ${index === 0 ? 'mandi-comp-card--rank-1' : ''}`}>
+            <div key={mandi.mandi_id} className={`mandi-comp-card ${index === 0 ? 'mandi-comp-card--rank-1' : ''}`}>
               <div className="mandi-comp-info">
-                <div className="mandi-comp-name">{mandi.mandiName}</div>
+                <div className="mandi-comp-name">{mandi.mandi_name}</div>
                 <div className="mandi-comp-location">
                   {mandi.district}, {mandi.state}
-                  {mandi.distanceKm && ` • ~${mandi.distanceKm} km`}
                 </div>
               </div>
               <div className="mandi-comp-stats">
                 <div className="mandi-comp-stat">
                   <span className="mandi-comp-stat-label">Market Price</span>
-                  <span className="mandi-comp-stat-val">₹{mandi.price}/q</span>
+                  <span className="mandi-comp-stat-val">₹{mandi.modal_price}/q</span>
                 </div>
                 <div className="mandi-comp-stat" style={{ opacity: 0.8 }}>
                   <span className="mandi-comp-stat-label">Est. Transport</span>
-                  <span className="mandi-comp-stat-val mandi-comp-stat-val--red">-₹{mandi.transportCost}</span>
+                  <span className="mandi-comp-stat-val mandi-comp-stat-val--red">-₹{mandi.total_transport_cost}</span>
                 </div>
                 <div className="mandi-comp-stat">
                   <span className="mandi-comp-stat-label">Net Profit</span>
                   <span className={`mandi-comp-stat-val ${index === 0 ? 'mandi-comp-stat-val--green' : ''}`}>
-                    ₹{mandi.netProfit.toLocaleString()}
+                    ₹{mandi.net_profit.toLocaleString()}
                   </span>
                 </div>
               </div>

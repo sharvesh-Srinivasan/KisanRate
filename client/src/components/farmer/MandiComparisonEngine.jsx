@@ -17,8 +17,8 @@ const MandiComparisonEngine = ({ farmerLocation }) => {
 
   const fetchCrops = async () => {
     try {
-      const data = await getCrops();
-      setCrops(data);
+      const response = await getCrops();
+      setCrops(response.data || []);
     } catch (err) {
       console.error("Failed to load crops for mandi comparison", err);
     }

@@ -5,7 +5,8 @@ const {
   updateStock,
   deleteStock,
   getPortfolio,
-  getSellAdvice
+  getSellAdvice,
+  compareMandis
 } = require("../controllers/farmerStockController");
 const { authenticateFarmer } = require("../middleware/authMiddleware");
 
@@ -21,5 +22,6 @@ router.delete("/stock/:id", deleteStock);
 
 router.get("/portfolio", getPortfolio);
 router.get("/sell-advice", getSellAdvice);
+router.post("/compare-mandis", compareMandis);
 
 module.exports = router;

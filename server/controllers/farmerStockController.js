@@ -202,6 +202,21 @@ const getPortfolio = async (req, res) => {
           }
         }
 
+        // Wait vs Sell logic
+        let waitVsSellProfitDiff = null;
+        let optimalAction = "Sell Today";
+        if (currentPrice && predictedPrice) {
+          const diff = (predictedPrice - currentPrice) * Number(item.quantity_quintals);
+          waitVsSellProfitDiff = Math.round(diff);
+          if (predictedPrice > currentPrice * 1.04) {
+            optimalAction = "Wait 3 Days";
+          } else if (predictedPrice < currentPrice * 0.97) {
+            optimalAction = "Sell Urgent";
+          } else {
+            optimalAction = "Sell Today";
+          }
+        }
+
         return {
           ...item,
           current_price: currentPrice,
@@ -209,6 +224,8 @@ const getPortfolio = async (req, res) => {
           harvest_price: harvestPrice,
           price_change_pct: priceChangePct ? Number(priceChangePct) : null,
           total_value: totalValue ? Math.round(totalValue) : null,
+          wait_vs_sell_profit_diff: waitVsSellProfitDiff,
+          optimal_action: optimalAction,
           best_mandi: bestMandi
             ? {
                 mandi_id: bestMandi.mandi_id,
@@ -370,4 +387,83 @@ const getSellAdvice = async (req, res) => {
   }
 };
 
-module.exports = { listStock, addStock, updateStock, deleteStock, getPortfolio, getSellAdvice };
+// ── Compare Mandis Engine ───────────────────────────────────────────────────────
+
+const compareMandis = async (req, res) => {
+  try {
+    const { crop_id, quantity_quintals, farmer_district, farmer_state } = req.body;
+
+    if (!crop_id || !quantity_quintals) {
+      return res.status(400).json({ success: false, message: "Crop and quantity are required" });
+    }
+
+    const qty = Number(quantity_quintals);
+
+    // Get latest prices for this crop in all mandis
+    const [prices] = await db.query(
+      `SELECT p.mandi_id, m.name AS mandi_name, m.district, m.state, p.modal_price, p.price_date
+       FROM prices p
+       JOIN mandis m ON p.mandi_id = m.id
+       WHERE p.crop_id = ?
+         AND p.price_date = (
+           SELECT MAX(p2.price_date) FROM prices p2 WHERE p2.crop_id = ?
+         )`,
+      [crop_id, crop_id]
+    );
+
+    if (!prices.length) {
+      return res.json({ success: true, data: [], message: "No price data for this crop" });
+    }
+
+    const userDistrict = String(farmer_district || "").trim().toLowerCase();
+    const userState = String(farmer_state || "").trim().toLowerCase();
+
+    // Map through prices and calculate transport cost and net profit
+    const comparisons = prices.map((mandi) => {
+      const mandiDistrict = String(mandi.district || "").trim().toLowerCase();
+      const mandiState = String(mandi.state || "").trim().toLowerCase();
+
+      // Default Transport Cost rule
+      let transportRatePerQuintal = 50; // Default: same district
+
+      if (userState && mandiState && userState !== mandiState) {
+        transportRatePerQuintal = 300; // different state
+      } else if (userDistrict && mandiDistrict && userDistrict !== mandiDistrict) {
+        transportRatePerQuintal = 150; // different district, same state
+      }
+
+      const totalTransportCost = transportRatePerQuintal * qty;
+      const grossRevenue = Number(mandi.modal_price) * qty;
+      const netProfit = grossRevenue - totalTransportCost;
+
+      return {
+        mandi_id: mandi.mandi_id,
+        mandi_name: mandi.mandi_name,
+        district: mandi.district,
+        state: mandi.state,
+        modal_price: Number(mandi.modal_price),
+        transport_rate_per_quintal: transportRatePerQuintal,
+        total_transport_cost: totalTransportCost,
+        gross_revenue: grossRevenue,
+        net_profit: netProfit,
+      };
+    });
+
+    // Sort by highest net profit
+    comparisons.sort((a, b) => b.net_profit - a.net_profit);
+
+    // Return top 10
+    const topComparisons = comparisons.slice(0, 10);
+
+    return res.json({
+      success: true,
+      data: topComparisons,
+      message: "Mandi comparison generated"
+    });
+  } catch (error) {
+    logWarn(`compareMandis failed: ${error.message}`);
+    return res.status(500).json({ success: false, data: null, message: "Failed to compare mandis" });
+  }
+};
+
+module.exports = { listStock, addStock, updateStock, deleteStock, getPortfolio, getSellAdvice, compareMandis };

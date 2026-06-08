@@ -197,3 +197,10 @@ export const getFarmerSellAdvice = async (params) => {
   });
   return response.data;
 };
+
+export const compareMandis = async (data) => {
+  const response = await apiClient.post("/api/farmer/compare-mandis", data, {
+    headers: farmerHeaders()
+  });
+  return response.data;
+};

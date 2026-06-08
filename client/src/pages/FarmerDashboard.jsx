@@ -4,6 +4,7 @@ import { getFarmerPortfolio, getPriceHistory } from "../api";
 import PortfolioCard from "../components/farmer/PortfolioCard";
 import SellDecisionPanel from "../components/farmer/SellDecisionPanel";
 import PersonalPriceChart from "../components/farmer/PersonalPriceChart";
+import MandiComparisonEngine from "../components/farmer/MandiComparisonEngine";
 
 // ── Chart colors per crop (cycles through palette) ──────────────────────────
 const CHART_COLORS = [
@@ -172,6 +173,7 @@ const FarmerDashboard = () => {
           {[
             { key: "dashboard", label: "Dashboard", icon: "📊" },
             { key: "advisor", label: "Sell Advisor", icon: "💡" },
+            { key: "mandi-compare", label: "Compare Mandis", icon: "⚖️" },
             { key: "charts", label: "Price Charts", icon: "📈" }
           ].map(({ key, label, icon }) => (
             <button
@@ -336,6 +338,18 @@ const FarmerDashboard = () => {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── Tab: Mandi Compare ────────────────────────────────────────────── */}
+        {activeTab === "mandi-compare" && (
+          <div className="farmer-dash-section">
+            <MandiComparisonEngine 
+              farmerLocation={{
+                district: farmer?.district,
+                state: farmer?.state
+              }} 
+            />
           </div>
         )}
       </main>

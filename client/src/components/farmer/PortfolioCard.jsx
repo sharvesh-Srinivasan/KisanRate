@@ -127,6 +127,21 @@ const PortfolioCard = ({ item, onEdit, onDelete }) => {
         )}
       </div>
 
+      {/* Wait Insight Action Block */}
+      {item.wait_insight && (
+        <div className="portfolio-card-action-block">
+          <div className="portfolio-card-action-text">
+            <span className="portfolio-card-action-title">
+              {item.wait_insight.signal === "wait" ? "Hold Stock" : "Sell Now"}
+            </span>
+            <span className="portfolio-card-action-desc">{item.wait_insight.reason}</span>
+          </div>
+          <div className={`portfolio-card-action-badge portfolio-card-action-badge--${item.wait_insight.signal === 'wait' ? 'wait' : item.wait_insight.signal === 'sell_urgent' ? 'urgent' : 'sell'}`}>
+            {item.wait_insight.signal === 'wait' ? 'Wait 3 Days' : item.wait_insight.signal === 'sell_urgent' ? 'Urgent' : 'Sell'}
+          </div>
+        </div>
+      )}
+
       {/* Meta */}
       <div className="portfolio-card-meta">
         {best_mandi && (

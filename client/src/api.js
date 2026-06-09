@@ -6,7 +6,8 @@ const apiClient = axios.create({
 
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem("kisanrate_token");
-  if (token) {
+  // Don't overwrite if an Authorization header is already set (e.g., for farmer APIs)
+  if (token && !config.headers.Authorization) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;

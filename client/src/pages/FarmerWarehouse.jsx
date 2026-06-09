@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { getCrops, getFarmerStock, addFarmerStock, updateFarmerStock, deleteFarmerStock } from "../api";
+import SellCropModal from "../components/farmer/SellCropModal";
 
 const FarmerWarehouse = () => {
   const navigate = useNavigate();
@@ -10,6 +11,10 @@ const FarmerWarehouse = () => {
   const [error, setError] = useState("");
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [sellModalOpen, setSellModalOpen] = useState(false);
+  const [sellItem, setSellItem] = useState(null);
+  
+  const [farmer, setFarmer] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({
     crop_id: "",
@@ -44,6 +49,10 @@ const FarmerWarehouse = () => {
       navigate("/farmer/login");
       return;
     }
+    const farmerData = localStorage.getItem("kisanrate_farmer");
+    if (farmerData) {
+      try { setFarmer(JSON.parse(farmerData)); } catch {}
+    }
     loadData();
   }, [navigate, loadData]);
 
@@ -68,6 +77,16 @@ const FarmerWarehouse = () => {
     setForm({ crop_id: "", quantity_quintals: "", harvest_date: "", storage_location: "" });
     setEditingId(null);
     setError("");
+  };
+
+  const openSellModal = (item) => {
+    setSellItem(item);
+    setSellModalOpen(true);
+  };
+
+  const closeSellModal = () => {
+    setSellModalOpen(false);
+    setSellItem(null);
   };
 
   const handleSubmit = async (e) => {
@@ -149,6 +168,7 @@ const FarmerWarehouse = () => {
                     <td>{new Date(item.created_at).toLocaleDateString("en-IN")}</td>
                     <td>
                       <div className="farmer-wh-actions">
+                        <button className="farmer-wh-sell-btn" onClick={() => openSellModal(item)}>Sell</button>
                         <button className="farmer-wh-edit-btn" onClick={() => openModal(item)}>Edit</button>
                         <button className="farmer-wh-del-btn" onClick={() => handleDelete(item.id)}>Delete</button>
                       </div>
@@ -218,6 +238,15 @@ const FarmerWarehouse = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Sell Modal */}
+      {sellModalOpen && sellItem && (
+        <SellCropModal
+          item={sellItem}
+          farmerProfile={farmer}
+          onClose={closeSellModal}
+        />
       )}
     </div>
   );

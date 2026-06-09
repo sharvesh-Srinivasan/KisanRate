@@ -2472,11 +2472,13 @@ html {
 .farmer-wh-table tr:hover td { background: #f8fafc; }
 
 .farmer-wh-actions { display: flex; gap: 0.5rem; }
-.farmer-wh-edit-btn, .farmer-wh-del-btn { background: none; border: none; font-size: 0.85rem; font-weight: 700; cursor: pointer; padding: 0.35rem 0.75rem; border-radius: 0.5rem; transition: background 0.2s; }
+.farmer-wh-edit-btn, .farmer-wh-del-btn, .farmer-wh-sell-btn { background: none; border: none; font-size: 0.85rem; font-weight: 700; cursor: pointer; padding: 0.35rem 0.75rem; border-radius: 0.5rem; transition: background 0.2s; }
 .farmer-wh-edit-btn { color: #0284c7; background: #f0f9ff; }
 .farmer-wh-edit-btn:hover { background: #e0f2fe; }
 .farmer-wh-del-btn { color: #dc2626; background: #fef2f2; }
 .farmer-wh-del-btn:hover { background: #fee2e2; }
+.farmer-wh-sell-btn { color: #16a34a; background: #dcfce7; }
+.farmer-wh-sell-btn:hover { background: #bbf7d0; }
 
 .farmer-wh-modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 1rem; }
 .farmer-wh-modal { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1rem; width: 100%; max-width: 500px; padding: 2rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
@@ -2492,6 +2494,49 @@ html {
 .farmer-wh-field input:focus, .farmer-wh-field select:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1); }
 .farmer-wh-submit-btn { margin-top: 1rem; background: #10b981; color: #fff; font-weight: 800; padding: 1rem; border-radius: 0.5rem; border: none; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2); }
 .farmer-wh-submit-btn:hover { background: #059669; transform: translateY(-1px); box-shadow: 0 6px 10px -1px rgba(16, 185, 129, 0.2); }
+
+/* Sell Modal Specific */
+.farmer-sell-modal { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1rem; width: 100%; max-width: 600px; padding: 2rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); max-height: 90vh; overflow-y: auto; }
+.farmer-sell-loading { padding: 3rem; text-align: center; color: #64748b; font-weight: 600; }
+.farmer-sell-content { display: flex; flex-direction: column; gap: 1.5rem; }
+
+.farmer-sell-alert { display: flex; gap: 1rem; padding: 1rem; border-radius: 0.75rem; align-items: flex-start; }
+.farmer-sell-alert--wait { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+.farmer-sell-alert--sell { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+.farmer-sell-alert-icon { font-size: 1.5rem; }
+.farmer-sell-alert h4 { margin: 0 0 0.25rem 0; font-weight: 700; font-size: 1rem; }
+.farmer-sell-alert p { margin: 0; font-size: 0.85rem; opacity: 0.9; }
+
+.farmer-sell-section-title { font-size: 1.1rem; font-weight: 800; color: #0f172a; margin: 0 0 -0.5rem 0; padding-bottom: 0.5rem; border-bottom: 1px solid #e2e8f0; }
+
+.farmer-sell-mandis { display: flex; flex-direction: column; gap: 1rem; }
+.farmer-sell-mandi-card { border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1rem; background: #f8fafc; }
+.farmer-sell-mandi-card.top-mandi { border-color: #10b981; background: #ffffff; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.1); }
+.mandi-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+.mandi-card-title { display: flex; align-items: center; gap: 0.5rem; }
+.mandi-name { font-weight: 700; color: #0f172a; font-size: 1.05rem; }
+.mandi-badge { background: #10b981; color: white; font-size: 0.65rem; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 999px; text-transform: uppercase; }
+.mandi-location { font-size: 0.8rem; color: #64748b; font-weight: 500; }
+
+.mandi-card-stats { display: flex; justify-content: space-between; background: #f1f5f9; padding: 0.75rem; border-radius: 0.5rem; margin-bottom: 0.75rem; }
+.mandi-stat { display: flex; flex-direction: column; gap: 0.25rem; }
+.mandi-stat span { font-size: 0.7rem; color: #64748b; font-weight: 600; text-transform: uppercase; }
+.mandi-stat strong { font-size: 1rem; color: #0f172a; font-weight: 800; }
+.mandi-stat.text-red strong { color: #dc2626; }
+.mandi-stat.text-green strong { color: #10b981; }
+
+.mandi-contact { font-size: 0.85rem; color: #334155; }
+.farmer-sell-empty { color: #64748b; font-size: 0.9rem; font-style: italic; }
+
+.farmer-sell-logistics { display: grid; grid-template-columns: 1fr; gap: 0.75rem; }
+@media (min-width: 480px) { .farmer-sell-logistics { grid-template-columns: 1fr 1fr; } }
+.logistics-card { display: flex; gap: 0.75rem; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 0.5rem; align-items: center; background: #ffffff; }
+.logistics-icon { width: 32px; height: 32px; background: #f1f5f9; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+.logistics-info { flex: 1; }
+.logistics-name { font-weight: 700; font-size: 0.85rem; color: #0f172a; }
+.logistics-type { font-size: 0.75rem; color: #64748b; }
+.logistics-contact a { background: #25d366; color: white; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem; font-weight: 700; text-decoration: none; display: inline-block; transition: background 0.2s; }
+.logistics-contact a:hover { background: #16a34a; }
 
 /* ══════════════════════════════════════════════════════════════════════════════
    MANDI COMPARISON ENGINE

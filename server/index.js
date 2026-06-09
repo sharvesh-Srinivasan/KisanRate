@@ -117,6 +117,37 @@ const ensureFarmerPortalTables = async () => {
     )`
   );
 
+  // Transporters for the new selling flow
+  await db.query(
+    `CREATE TABLE IF NOT EXISTS transporters (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      name VARCHAR(100) NOT NULL,
+      district VARCHAR(100) NOT NULL,
+      phone VARCHAR(20) NOT NULL,
+      rate_per_quintal DECIMAL(10,2),
+      type VARCHAR(50),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`
+  );
+
+  // Farmer sales history for profit tracking
+  await db.query(
+    `CREATE TABLE IF NOT EXISTS farmer_sales (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      farmer_id INT NOT NULL,
+      crop_id INT NOT NULL,
+      mandi_id INT,
+      quantity_quintals DECIMAL(10,2) NOT NULL,
+      actual_price DECIMAL(10,2) NOT NULL,
+      predicted_price DECIMAL(10,2),
+      sold_date DATE NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (farmer_id) REFERENCES farmers(id) ON DELETE CASCADE,
+      FOREIGN KEY (crop_id) REFERENCES crops(id),
+      FOREIGN KEY (mandi_id) REFERENCES mandis(id)
+    )`
+  );
+
   // Add district column to farmers if missing
   const [districtCol] = await db.query(
     `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS

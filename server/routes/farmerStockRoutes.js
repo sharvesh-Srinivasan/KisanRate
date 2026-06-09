@@ -24,4 +24,8 @@ router.get("/portfolio", getPortfolio);
 router.get("/sell-advice", getSellAdvice);
 router.post("/compare-mandis", compareMandis);
 
+router.get("/transporters", require("../controllers/farmerStockController").getTransporters);
+router.post("/sell-confirm", require("../controllers/farmerStockController").confirmSale);
+router.get("/sales-history", require("../controllers/farmerStockController").getSalesHistory);
+
 module.exports = router;

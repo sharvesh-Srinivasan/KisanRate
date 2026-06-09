@@ -7,8 +7,14 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem("kisanrate_token");
   // Don't overwrite if an Authorization header is already set (e.g., for farmer APIs)
-  if (token && !config.headers.Authorization) {
-    config.headers.Authorization = `Bearer ${token}`;
+  // Axios 1.x normalizes headers, so we should check using .has() or fallback to lowercase
+  const hasAuth = config.headers.has ? config.headers.has("Authorization") : (config.headers.Authorization || config.headers.authorization);
+  if (token && !hasAuth) {
+    if (config.headers.set) {
+      config.headers.set("Authorization", `Bearer ${token}`);
+    } else {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
   return config;
 });
@@ -201,6 +207,27 @@ export const getFarmerSellAdvice = async (params) => {
 
 export const compareMandis = async (data) => {
   const response = await apiClient.post("/api/farmer/compare-mandis", data, {
+    headers: farmerHeaders()
+  });
+  return response.data;
+};
+export const getTransporters = async (district) => {
+  const response = await apiClient.get("/api/farmer/transporters", {
+    headers: farmerHeaders(),
+    params: { district }
+  });
+  return response.data;
+};
+
+export const confirmFarmerSale = async (data) => {
+  const response = await apiClient.post("/api/farmer/sell-confirm", data, {
+    headers: farmerHeaders()
+  });
+  return response.data;
+};
+
+export const getFarmerSalesHistory = async () => {
+  const response = await apiClient.get("/api/farmer/sales-history", {
     headers: farmerHeaders()
   });
   return response.data;

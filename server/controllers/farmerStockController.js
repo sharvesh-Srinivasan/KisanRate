@@ -466,4 +466,100 @@ const compareMandis = async (req, res) => {
   }
 };
 
-module.exports = { listStock, addStock, updateStock, deleteStock, getPortfolio, getSellAdvice, compareMandis };
+// ── Transporters ──────────────────────────────────────────────────────────────────
+
+const getTransporters = async (req, res) => {
+  try {
+    const district = req.query.district || "";
+    // Get transporters for district, or some defaults if district not matched
+    let [rows] = await db.query(
+      "SELECT * FROM transporters WHERE LOWER(district) = LOWER(?)",
+      [district]
+    );
+
+    // If no transporters for district, return some generic ones or none
+    if (rows.length === 0) {
+      [rows] = await db.query("SELECT * FROM transporters LIMIT 5");
+    }
+
+    return res.json({ success: true, data: rows, message: "Transporters fetched" });
+  } catch (error) {
+    logWarn(`getTransporters failed: ${error.message}`);
+    return res.status(500).json({ success: false, data: null, message: "Failed to fetch transporters" });
+  }
+};
+
+// ── Confirm Sale ────────────────────────────────────────────────────────────────
+
+const confirmSale = async (req, res) => {
+  try {
+    const { farmerId } = req.farmer;
+    const { stock_id, crop_id, mandi_id, quantity_quintals, actual_price, predicted_price } = req.body;
+
+    if (!stock_id || !crop_id || !quantity_quintals || !actual_price) {
+      return res.status(400).json({ success: false, message: "Missing required sale details" });
+    }
+
+    const qtySold = Number(quantity_quintals);
+
+    // Verify stock exists and farmer owns it
+    const [stockRows] = await db.query(
+      "SELECT quantity_quintals FROM farmer_stock WHERE id = ? AND farmer_id = ?",
+      [stock_id, farmerId]
+    );
+
+    if (stockRows.length === 0) {
+      return res.status(404).json({ success: false, message: "Stock not found" });
+    }
+
+    const currentQty = Number(stockRows[0].quantity_quintals);
+    if (qtySold > currentQty) {
+      return res.status(400).json({ success: false, message: "Cannot sell more than you have" });
+    }
+
+    // Insert into farmer_sales
+    await db.query(
+      `INSERT INTO farmer_sales (farmer_id, crop_id, mandi_id, quantity_quintals, actual_price, predicted_price, sold_date)
+       VALUES (?, ?, ?, ?, ?, ?, CURDATE())`,
+      [farmerId, crop_id, mandi_id || null, qtySold, actual_price, predicted_price || null]
+    );
+
+    // Update or Delete stock
+    if (qtySold >= currentQty) {
+      await db.query("DELETE FROM farmer_stock WHERE id = ?", [stock_id]);
+    } else {
+      await db.query("UPDATE farmer_stock SET quantity_quintals = quantity_quintals - ? WHERE id = ?", [qtySold, stock_id]);
+    }
+
+    return res.json({ success: true, message: "Sale confirmed successfully" });
+  } catch (error) {
+    logWarn(`confirmSale failed: ${error.message}`);
+    return res.status(500).json({ success: false, message: "Failed to confirm sale" });
+  }
+};
+
+// ── Sales History ────────────────────────────────────────────────────────────────
+
+const getSalesHistory = async (req, res) => {
+  try {
+    const { farmerId } = req.farmer;
+
+    const [rows] = await db.query(
+      `SELECT s.id, s.quantity_quintals, s.actual_price, s.predicted_price, s.sold_date,
+              c.name AS crop_name, m.name AS mandi_name
+       FROM farmer_sales s
+       JOIN crops c ON s.crop_id = c.id
+       LEFT JOIN mandis m ON s.mandi_id = m.id
+       WHERE s.farmer_id = ?
+       ORDER BY s.sold_date DESC, s.created_at DESC`,
+      [farmerId]
+    );
+
+    return res.json({ success: true, data: rows, message: "Sales history fetched" });
+  } catch (error) {
+    logWarn(`getSalesHistory failed: ${error.message}`);
+    return res.status(500).json({ success: false, message: "Failed to fetch sales history" });
+  }
+};
+
+module.exports = { listStock, addStock, updateStock, deleteStock, getPortfolio, getSellAdvice, compareMandis, getTransporters, confirmSale, getSalesHistory };

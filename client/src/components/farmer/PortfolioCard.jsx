@@ -27,7 +27,7 @@ const MapPin = () => (
   </svg>
 );
 
-const PortfolioCard = ({ item, onEdit, onDelete }) => {
+const PortfolioCard = ({ item, onEdit, onDelete, onSell }) => {
   const {
     crop_name,
     quantity_quintals,
@@ -161,6 +161,22 @@ const PortfolioCard = ({ item, onEdit, onDelete }) => {
           </span>
         )}
       </div>
+
+      {/* Main Sell Action */}
+      {onSell && (
+        <div className="portfolio-card-footer" style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid rgba(0,0,0,0.05)", display: "flex", justifyContent: "flex-end" }}>
+          <button 
+            onClick={() => onSell(item)}
+            style={{ 
+              background: "#16a34a", color: "white", padding: "0.6rem 1.5rem", borderRadius: "99px",
+              fontWeight: "700", border: "none", cursor: "pointer", display: "flex", gap: "8px", alignItems: "center",
+              boxShadow: "0 4px 12px rgba(22, 163, 74, 0.25)" 
+            }}
+          >
+            💰 Sell Crop
+          </button>
+        </div>
+      )}
     </div>
   );
 };

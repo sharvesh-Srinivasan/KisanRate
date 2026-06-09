@@ -1,83 +1,165 @@
 import React, { useState, useEffect } from "react";
-import { getFarmerSellAdvice, compareMandis } from "../../api";
+import { getFarmerSellAdvice, compareMandis, getTransporters, confirmFarmerSale } from "../../api";
 
-const SellCropModal = ({ item, farmerProfile, onClose }) => {
-  const [loading, setLoading] = useState(true);
+const SellCropModal = ({ item, farmerProfile, onClose, onSaleConfirmed }) => {
+  const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  
+
+  // Step 1 State
+  const [quantityToSell, setQuantityToSell] = useState(item.quantity_quintals);
+
+  // Step 2 State
   const [advice, setAdvice] = useState(null);
   const [bestMandis, setBestMandis] = useState([]);
+  const [selectedMandi, setSelectedMandi] = useState(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      setError("");
-      try {
-        const district = farmerProfile?.district || "";
-        const state = farmerProfile?.state || "";
+  // Step 3 State
+  const [transporters, setTransporters] = useState([]);
+  const [actualPrice, setActualPrice] = useState("");
 
-        // 1. Get Sell Advice
-        const adviceRes = await getFarmerSellAdvice({
+  // ----- STEP 1 -> STEP 2 -----
+  const handleProceedToMandi = async () => {
+    const qty = Number(quantityToSell);
+    if (!qty || qty <= 0 || qty > Number(item.quantity_quintals)) {
+      setError("Please enter a valid quantity (up to your total stock).");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    try {
+      const district = farmerProfile?.district || "";
+      const state = farmerProfile?.state || "";
+
+      const [adviceRes, compareRes] = await Promise.all([
+        getFarmerSellAdvice({ crop_id: item.crop_id, quantity: qty }),
+        compareMandis({
           crop_id: item.crop_id,
-          quantity: item.quantity_quintals
-        });
-        
-        if (adviceRes.success) {
-          setAdvice(adviceRes.data);
-        }
-
-        // 2. Get Mandi Comparison
-        const compareRes = await compareMandis({
-          crop_id: item.crop_id,
-          quantity_quintals: item.quantity_quintals,
+          quantity_quintals: qty,
           farmer_district: district,
           farmer_state: state
-        });
-        
-        if (compareRes.success && compareRes.data.length > 0) {
-          setBestMandis(compareRes.data.slice(0, 2)); // Get top 2 mandis
-        }
+        })
+      ]);
 
-      } catch (err) {
-        console.error(err);
-        setError("Failed to fetch selling options.");
-      } finally {
-        setLoading(false);
+      if (adviceRes.success) setAdvice(adviceRes.data);
+      if (compareRes.success && compareRes.data.length > 0) {
+        setBestMandis(compareRes.data.slice(0, 3)); // Top 3 mandis
+        setSelectedMandi(compareRes.data[0]); // Default to top mandi
       }
-    };
-
-    if (item && item.crop_id) {
-      fetchData();
+      setStep(2);
+    } catch (err) {
+      setError("Failed to fetch market data.");
+    } finally {
+      setLoading(false);
     }
-  }, [item, farmerProfile]);
+  };
 
-  // Mock Logistics details (deterministically generated based on district)
-  const getLogisticsForDistrict = (district) => {
-    const districtName = district || "Your Area";
-    return [
-      { name: `Kisan Logistics (${districtName})`, phone: "98765 43210", type: "Truck / Tractor" },
-      { name: `FastAgri Transporters`, phone: "91234 56789", type: "Mini-Truck" }
-    ];
+  // ----- STEP 2 -> STEP 3 -----
+  const handleProceedToTransport = async () => {
+    if (!selectedMandi) {
+      setError("Please select a mandi to sell at.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    try {
+      const transRes = await getTransporters(farmerProfile?.district || "");
+      if (transRes.success) {
+        setTransporters(transRes.data);
+      }
+      setActualPrice(selectedMandi.modal_price); // Default actual price to modal price
+      setStep(3);
+    } catch (err) {
+      setError("Failed to load transport options.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ----- STEP 3 (CONFIRM SALE) -----
+  const handleConfirmSale = async () => {
+    const price = Number(actualPrice);
+    if (!price || price <= 0) {
+      setError("Please enter the actual price received.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    try {
+      const res = await confirmFarmerSale({
+        stock_id: item.id,
+        crop_id: item.crop_id,
+        mandi_id: selectedMandi.mandi_id,
+        quantity_quintals: quantityToSell,
+        actual_price: price,
+        predicted_price: selectedMandi.predicted_price || advice?.predicted_price || null
+      });
+
+      if (res.success) {
+        if (onSaleConfirmed) onSaleConfirmed();
+        onClose();
+      } else {
+        setError(res.message || "Failed to confirm sale");
+      }
+    } catch (err) {
+      setError(err?.response?.data?.message || "Failed to confirm sale");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getLogisticsForSelf = () => {
+    return { name: "Self Transport", phone: "", type: "Use your own vehicle", address: `${selectedMandi?.mandi_name}, ${selectedMandi?.district}` };
   };
 
   return (
-    <div className="farmer-wh-modal-backdrop">
+    <div className="farmer-wh-modal-backdrop" style={{ zIndex: 1000 }}>
       <div className="farmer-sell-modal">
         <div className="farmer-wh-modal-header">
           <h2>Sell {item.crop_name}</h2>
           <button className="farmer-wh-modal-close" onClick={onClose}>×</button>
         </div>
-        
-        {loading ? (
-          <div className="farmer-sell-loading">Analyzing best markets...</div>
-        ) : error ? (
-          <div className="farmer-wh-error">{error}</div>
-        ) : (
-          <div className="farmer-sell-content">
-            
+
+        {error && <div className="farmer-wh-error" style={{ marginBottom: "1rem" }}>{error}</div>}
+
+        {/* STEP 1 */}
+        {step === 1 && (
+          <div className="farmer-sell-step">
+            <h3 className="farmer-sell-section-title" style={{ borderBottom: "none", paddingBottom: 0 }}>How much are you selling?</h3>
+            <p style={{ fontSize: "0.85rem", color: "#64748b", marginBottom: "1.5rem" }}>
+              You currently hold <strong>{item.quantity_quintals} Quintals</strong> in your warehouse.
+            </p>
+            <div className="farmer-wh-field">
+              <label>Quantity to Sell (Quintals)</label>
+              <input 
+                type="number" 
+                value={quantityToSell} 
+                onChange={(e) => setQuantityToSell(e.target.value)} 
+                max={item.quantity_quintals} 
+                min="0.1" 
+                step="0.1" 
+              />
+            </div>
+            <button 
+              className="farmer-wh-submit-btn" 
+              onClick={handleProceedToMandi} 
+              disabled={loading}
+              style={{ width: "100%", marginTop: "2rem" }}
+            >
+              {loading ? "Analyzing Markets..." : "Find Best Markets ➔"}
+            </button>
+          </div>
+        )}
+
+        {/* STEP 2 */}
+        {step === 2 && (
+          <div className="farmer-sell-step">
             {/* AI Recommendation */}
             {advice && (
-              <div className={`farmer-sell-alert ${advice.signal === 'hold' ? 'farmer-sell-alert--wait' : 'farmer-sell-alert--sell'}`}>
+              <div className={`farmer-sell-alert ${advice.signal === 'hold' ? 'farmer-sell-alert--wait' : 'farmer-sell-alert--sell'}`} style={{ marginBottom: "1.5rem" }}>
                 <div className="farmer-sell-alert-icon">
                   {advice.signal === 'hold' ? '⏳' : '✅'}
                 </div>
@@ -88,64 +170,142 @@ const SellCropModal = ({ item, farmerProfile, onClose }) => {
               </div>
             )}
 
-            {/* Best Mandis */}
-            <h3 className="farmer-sell-section-title">Best Markets for You</h3>
+            <h3 className="farmer-sell-section-title">Select a Market</h3>
             {bestMandis.length > 0 ? (
-              <div className="farmer-sell-mandis">
-                {bestMandis.map((mandi, idx) => (
-                  <div key={mandi.mandi_id} className={`farmer-sell-mandi-card ${idx === 0 ? 'top-mandi' : ''}`}>
-                    <div className="mandi-card-header">
-                      <div className="mandi-card-title">
-                        <span className="mandi-name">{mandi.mandi_name}</span>
-                        {idx === 0 && <span className="mandi-badge">Top Choice</span>}
+              <div className="farmer-sell-mandis" style={{ marginTop: "1rem", gap: "0.75rem" }}>
+                {bestMandis.map((mandi, idx) => {
+                  const isSelected = selectedMandi?.mandi_id === mandi.mandi_id;
+                  return (
+                    <div 
+                      key={mandi.mandi_id} 
+                      className={`farmer-sell-mandi-card ${isSelected ? 'top-mandi' : ''}`}
+                      style={{ cursor: "pointer", border: isSelected ? "2px solid #10b981" : "1px solid #e2e8f0" }}
+                      onClick={() => setSelectedMandi(mandi)}
+                    >
+                      <div className="mandi-card-header">
+                        <div className="mandi-card-title">
+                          <span className="mandi-name">{mandi.mandi_name}</span>
+                          {idx === 0 && <span className="mandi-badge" style={{ marginLeft: "8px" }}>Best Profit</span>}
+                        </div>
+                        <div className="mandi-location">{mandi.district}, {mandi.state}</div>
                       </div>
-                      <div className="mandi-location">{mandi.district}, {mandi.state}</div>
+                      <div className="mandi-card-stats">
+                        <div className="mandi-stat">
+                          <span>Price/Q</span>
+                          <strong>₹{mandi.modal_price}</strong>
+                        </div>
+                        <div className="mandi-stat text-red">
+                          <span>Est. Transport</span>
+                          <strong>-₹{mandi.total_transport_cost}</strong>
+                        </div>
+                        <div className="mandi-stat text-green">
+                          <span>Net Profit</span>
+                          <strong>₹{mandi.net_profit.toLocaleString()}</strong>
+                        </div>
+                      </div>
                     </div>
-                    <div className="mandi-card-stats">
-                      <div className="mandi-stat">
-                        <span>Expected Price</span>
-                        <strong>₹{mandi.modal_price}/q</strong>
-                      </div>
-                      <div className="mandi-stat text-red">
-                        <span>Est. Transport</span>
-                        <strong>-₹{mandi.total_transport_cost}</strong>
-                      </div>
-                      <div className="mandi-stat text-green">
-                        <span>Net Profit</span>
-                        <strong>₹{mandi.net_profit.toLocaleString()}</strong>
-                      </div>
-                    </div>
-                    <div className="mandi-contact">
-                      📞 Mandi Office: <strong>99887 76655</strong>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <p className="farmer-sell-empty">No active markets found for this crop today.</p>
             )}
 
-            {/* Transport Options */}
-            <h3 className="farmer-sell-section-title">Transportation Options</h3>
+            <div style={{ display: "flex", gap: "1rem", marginTop: "2rem" }}>
+              <button 
+                className="farmer-wh-back-btn" 
+                onClick={() => setStep(1)} 
+                style={{ flex: 1, margin: 0, padding: "1rem" }}
+              >
+                Back
+              </button>
+              <button 
+                className="farmer-wh-submit-btn" 
+                onClick={handleProceedToTransport} 
+                disabled={loading || !selectedMandi}
+                style={{ flex: 2, margin: 0 }}
+              >
+                {loading ? "Loading..." : "Arrange Transport ➔"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 3 */}
+        {step === 3 && (
+          <div className="farmer-sell-step">
+            <h3 className="farmer-sell-section-title">Logistics & Transport</h3>
+            <p style={{ fontSize: "0.85rem", color: "#64748b", margin: "0.5rem 0 1.5rem 0" }}>
+              Target: <strong>{selectedMandi?.mandi_name}</strong>
+            </p>
+
             <div className="farmer-sell-logistics">
-              {getLogisticsForDistrict(farmerProfile?.district).map((logistics, idx) => (
+              {/* Self transport card */}
+              <div className="logistics-card" style={{ border: "2px solid #e2e8f0" }}>
+                <div className="logistics-icon">🚜</div>
+                <div className="logistics-info">
+                  <div className="logistics-name">Self Transport</div>
+                  <div className="logistics-type">{selectedMandi?.district}</div>
+                </div>
+                <div className="logistics-contact">
+                  <a href={`https://maps.google.com/?q=${selectedMandi?.mandi_name}+Mandi+${selectedMandi?.district}`} target="_blank" rel="noreferrer" style={{ background: "#3b82f6" }}>
+                    🗺️ Directions
+                  </a>
+                </div>
+              </div>
+
+              {/* DB Transporters */}
+              {transporters.map((trans, idx) => (
                 <div key={idx} className="logistics-card">
                   <div className="logistics-icon">🚚</div>
                   <div className="logistics-info">
-                    <div className="logistics-name">{logistics.name}</div>
-                    <div className="logistics-type">{logistics.type}</div>
+                    <div className="logistics-name">{trans.name}</div>
+                    <div className="logistics-type">{trans.type || "Truck"} • ₹{trans.rate_per_quintal}/Q</div>
                   </div>
                   <div className="logistics-contact">
-                    <a href={`tel:${logistics.phone.replace(/\s+/g, '')}`}>
-                      📞 {logistics.phone}
+                    <a href={`tel:${trans.phone.replace(/\s+/g, '')}`}>
+                      📞 {trans.phone}
                     </a>
                   </div>
                 </div>
               ))}
             </div>
 
+            <div style={{ marginTop: "2rem", padding: "1.5rem", background: "#f8fafc", borderRadius: "0.75rem", border: "1px solid #e2e8f0" }}>
+              <h3 className="farmer-sell-section-title" style={{ borderBottom: "none", paddingBottom: 0, marginBottom: "1rem" }}>Confirm Sale</h3>
+              <p style={{ fontSize: "0.85rem", color: "#64748b", marginBottom: "1rem" }}>
+                Enter the final price you received per quintal to track your profit accuracy.
+              </p>
+              <div className="farmer-wh-field">
+                <label>Actual Price Received (₹/Q)</label>
+                <input 
+                  type="number" 
+                  value={actualPrice} 
+                  onChange={(e) => setActualPrice(e.target.value)} 
+                />
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "1rem", marginTop: "2rem" }}>
+              <button 
+                className="farmer-wh-back-btn" 
+                onClick={() => setStep(2)} 
+                style={{ flex: 1, margin: 0, padding: "1rem" }}
+              >
+                Back
+              </button>
+              <button 
+                className="farmer-wh-submit-btn" 
+                onClick={handleConfirmSale} 
+                disabled={loading}
+                style={{ flex: 2, margin: 0 }}
+              >
+                {loading ? "Confirming..." : "Confirm Sale ✓"}
+              </button>
+            </div>
           </div>
         )}
+
       </div>
     </div>
   );

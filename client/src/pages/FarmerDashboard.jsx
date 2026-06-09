@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { getFarmerPortfolio, getPriceHistory } from "../api";
+import { getFarmerPortfolio, getPriceHistory, getFarmerSalesHistory } from "../api";
 import PortfolioCard from "../components/farmer/PortfolioCard";
+import SellCropModal from "../components/farmer/SellCropModal";
 import SellDecisionPanel from "../components/farmer/SellDecisionPanel";
 import PersonalPriceChart from "../components/farmer/PersonalPriceChart";
 import MandiComparisonEngine from "../components/farmer/MandiComparisonEngine";
@@ -41,10 +42,15 @@ const FarmerDashboard = () => {
 
   const [farmer, setFarmer] = useState(null);
   const [portfolio, setPortfolio] = useState([]);
+  const [salesHistory, setSalesHistory] = useState([]);
   const [histories, setHistories] = useState({}); // crop_id → history array
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState("dashboard"); // "dashboard" | "advisor" | "charts"
+  const [activeTab, setActiveTab] = useState("dashboard"); // "dashboard" | "advisor" | "charts" | "sales"
+
+  // Sell Modal State
+  const [sellModalOpen, setSellModalOpen] = useState(false);
+  const [sellItem, setSellItem] = useState(null);
 
   // Auth guard
   useEffect(() => {
@@ -59,30 +65,52 @@ const FarmerDashboard = () => {
     }
   }, [navigate]);
 
-  const loadPortfolio = useCallback(async () => {
+  const loadPortfolioAndSales = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
-      const res = await getFarmerPortfolio();
-      if (res.success) {
-        setPortfolio(res.data || []);
+      const [portRes, salesRes] = await Promise.all([
+        getFarmerPortfolio(),
+        getFarmerSalesHistory().catch(() => ({ success: false, data: [] }))
+      ]);
+      
+      if (portRes.success) {
+        setPortfolio(portRes.data || []);
       } else {
-        setError(res.message || "Failed to load portfolio");
+        setError(portRes.message || "Failed to load portfolio");
+      }
+
+      if (salesRes.success) {
+        setSalesHistory(salesRes.data || []);
       }
     } catch (err) {
       if (err?.response?.status === 401) {
         navigate("/farmer/login");
         return;
       }
-      setError("Could not load portfolio. Please try again.");
+      setError("Could not load dashboard data. Please try again.");
     } finally {
       setLoading(false);
     }
   }, [navigate]);
 
   useEffect(() => {
-    loadPortfolio();
-  }, [loadPortfolio]);
+    loadPortfolioAndSales();
+  }, [loadPortfolioAndSales]);
+
+  const handleSellClick = (item) => {
+    setSellItem(item);
+    setSellModalOpen(true);
+  };
+
+  const closeSellModal = () => {
+    setSellModalOpen(false);
+    setSellItem(null);
+  };
+
+  const handleSaleConfirmed = () => {
+    loadPortfolioAndSales(); // Refresh the portfolio and sales history
+  };
 
   // Load price history for each unique crop in portfolio
   useEffect(() => {
@@ -174,7 +202,8 @@ const FarmerDashboard = () => {
             { key: "dashboard", label: "Dashboard", icon: "📊" },
             { key: "advisor", label: "Sell Advisor", icon: "💡" },
             { key: "mandi-compare", label: "Compare Mandis", icon: "⚖️" },
-            { key: "charts", label: "Price Charts", icon: "📈" }
+            { key: "charts", label: "Price Charts", icon: "📈" },
+            { key: "sales", label: "Sales & Profit", icon: "💰" }
           ].map(({ key, label, icon }) => (
             <button
               key={key}
@@ -292,7 +321,7 @@ const FarmerDashboard = () => {
               ) : (
                 <div className="farmer-dash-portfolio-grid">
                   {portfolio.map((item) => (
-                    <PortfolioCard key={item.id} item={item} />
+                    <PortfolioCard key={item.id} item={item} onSell={handleSellClick} />
                   ))}
                 </div>
               )}
@@ -352,7 +381,90 @@ const FarmerDashboard = () => {
             />
           </div>
         )}
+
+        {/* ── Tab: Sales & Profit ────────────────────────────────────────────── */}
+        {activeTab === "sales" && (
+          <div className="farmer-dash-section">
+            <h2 className="farmer-dash-section-title">Sales & Profit Tracking</h2>
+            <p className="farmer-dash-section-subtitle">
+              Track your past sales and see how our AI predictions compared to the actual price you received.
+            </p>
+
+            {salesHistory.length === 0 ? (
+              <div className="farmer-dash-empty">
+                <div className="farmer-dash-empty-icon">🧾</div>
+                <h3>No sales recorded yet</h3>
+                <p>When you sell crops from your warehouse, the profit metrics will appear here.</p>
+              </div>
+            ) : (
+              <div className="farmer-sell-history-list" style={{ display: "flex", flexDirection: "column", gap: "1rem", marginTop: "1rem" }}>
+                {salesHistory.map(sale => {
+                  const actual = Number(sale.actual_price);
+                  const predicted = Number(sale.predicted_price);
+                  let profitMsg = "";
+                  let isAccurate = false;
+                  
+                  if (predicted && predicted > 0) {
+                    const diff = actual - predicted;
+                    if (diff > 0) {
+                      profitMsg = `You made ₹${diff}/Q more than expected!`;
+                    } else if (diff < 0) {
+                      profitMsg = `You made ₹${Math.abs(diff)}/Q less than expected.`;
+                    } else {
+                      profitMsg = `You made exactly the expected amount.`;
+                    }
+                    
+                    // Count as accurate if within 5%
+                    isAccurate = Math.abs(diff) <= (predicted * 0.05);
+                  }
+
+                  return (
+                    <div key={sale.id} className="portfolio-card" style={{ padding: "1.5rem" }}>
+                      <div className="portfolio-card-header">
+                        <div>
+                          <h3 className="portfolio-card-crop-name" style={{ marginBottom: "0.25rem" }}>{sale.crop_name}</h3>
+                          <span style={{ fontSize: "0.85rem", color: "#64748b" }}>
+                            {Number(sale.quantity_quintals)} Quintals sold on {new Date(sale.sold_date).toLocaleDateString("en-IN")}
+                          </span>
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                          <div style={{ fontSize: "1.1rem", fontWeight: "800", color: "#0f172a" }}>₹{actual}/Q</div>
+                          {sale.mandi_name && <div style={{ fontSize: "0.8rem", color: "#64748b" }}>at {sale.mandi_name}</div>}
+                        </div>
+                      </div>
+                      
+                      {predicted > 0 && (
+                        <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid #e2e8f0", display: "flex", gap: "1rem", alignItems: "center" }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: "0.75rem", color: "#64748b", textTransform: "uppercase", fontWeight: "700" }}>AI Prediction</div>
+                            <div style={{ fontSize: "0.95rem", fontWeight: "600", color: "#0f172a" }}>₹{predicted}/Q</div>
+                          </div>
+                          <div style={{ flex: 2, background: isAccurate ? "#f0fdf4" : "#f8fafc", padding: "0.75rem", borderRadius: "0.5rem", border: isAccurate ? "1px solid #bbf7d0" : "1px solid #e2e8f0" }}>
+                            <div style={{ fontSize: "0.85rem", color: isAccurate ? "#166534" : "#475569", fontWeight: "600" }}>
+                              {isAccurate ? "🎯 Accurate Prediction" : "📊 Performance"}
+                            </div>
+                            <div style={{ fontSize: "0.8rem", color: "#64748b" }}>{profitMsg}</div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </main>
+
+      {/* Sell Modal Wizard */}
+      {sellModalOpen && sellItem && (
+        <SellCropModal
+          item={sellItem}
+          farmerProfile={farmer}
+          onClose={closeSellModal}
+          onSaleConfirmed={handleSaleConfirmed}
+        />
+      )}
     </div>
   );
 };

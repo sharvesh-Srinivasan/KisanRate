@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { getFarmerSellAdvice, compareMandis, getTransporters, confirmFarmerSale } from "../../api";
 
 const SellCropModal = ({ item, farmerProfile, onClose, onSaleConfirmed }) => {
@@ -111,9 +111,7 @@ const SellCropModal = ({ item, farmerProfile, onClose, onSaleConfirmed }) => {
     }
   };
 
-  const getLogisticsForSelf = () => {
-    return { name: "Self Transport", phone: "", type: "Use your own vehicle", address: `${selectedMandi?.mandi_name}, ${selectedMandi?.district}` };
-  };
+
 
   return (
     <div className="farmer-wh-modal-backdrop" style={{ zIndex: 1000 }}>

@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from "react";
 import { Menu, X, Globe } from "lucide-react";
-import { Menu, X, Globe } from "lucide-react";
 import { useLang, LANGUAGES } from "../i18n";
 import WeatherTimeWidget from "./WeatherTimeWidget";
 

@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { getCrops, getFarmerStock, addFarmerStock, updateFarmerStock, deleteFarmerStock } from "../api";
+import { getCrops, getMandis, getFarmerStock, addFarmerStock, updateFarmerStock, deleteFarmerStock } from "../api";
 import SellCropModal from "../components/farmer/SellCropModal";
 
 const FarmerWarehouse = () => {
   const navigate = useNavigate();
   const [stock, setStock] = useState([]);
   const [crops, setCrops] = useState([]);
+  const [mandis, setMandis] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -20,18 +21,22 @@ const FarmerWarehouse = () => {
     crop_id: "",
     quantity_quintals: "",
     harvest_date: "",
-    storage_location: ""
+    storage_state: "Tamil Nadu",
+    storage_district: "",
+    storage_mandi: ""
   });
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [stockRes, cropsRes] = await Promise.all([
+      const [stockRes, cropsRes, mandisRes] = await Promise.all([
         getFarmerStock(),
-        getCrops()
+        getCrops(),
+        getMandis()
       ]);
       if (stockRes.success) setStock(stockRes.data);
       if (cropsRes.success) setCrops(cropsRes.data);
+      if (mandisRes.success) setMandis(mandisRes.data);
     } catch (err) {
       if (err?.response?.status === 401) {
         navigate("/farmer/login");
@@ -58,23 +63,41 @@ const FarmerWarehouse = () => {
 
   const openModal = (item = null) => {
     if (item) {
+      let stState = "Tamil Nadu";
+      let stDistrict = "";
+      let stMandi = "";
+      
+      // Try to parse out the parts if they exist: "MandiName, District, State"
+      if (item.storage_location) {
+        const parts = item.storage_location.split(",").map(p => p.trim());
+        if (parts.length === 3) {
+          stMandi = parts[0];
+          stDistrict = parts[1];
+          stState = parts[2];
+        } else {
+          stMandi = item.storage_location; // Fallback to raw string
+        }
+      }
+
       setEditingId(item.id);
       setForm({
         crop_id: item.crop_id || "",
         quantity_quintals: item.quantity_quintals || "",
         harvest_date: item.harvest_date ? item.harvest_date.slice(0, 10) : "",
-        storage_location: item.storage_location || ""
+        storage_state: stState,
+        storage_district: stDistrict,
+        storage_mandi: stMandi
       });
     } else {
       setEditingId(null);
-      setForm({ crop_id: "", quantity_quintals: "", harvest_date: "", storage_location: "" });
+      setForm({ crop_id: "", quantity_quintals: "", harvest_date: "", storage_state: "Tamil Nadu", storage_district: "", storage_mandi: "" });
     }
     setModalOpen(true);
   };
 
   const closeModal = () => {
     setModalOpen(false);
-    setForm({ crop_id: "", quantity_quintals: "", harvest_date: "", storage_location: "" });
+    setForm({ crop_id: "", quantity_quintals: "", harvest_date: "", storage_state: "Tamil Nadu", storage_district: "", storage_mandi: "" });
     setEditingId(null);
     setError("");
   };
@@ -97,10 +120,24 @@ const FarmerWarehouse = () => {
     }
 
     try {
+      let storage_location = "";
+      if (form.storage_mandi) {
+        storage_location = `${form.storage_mandi}`;
+        if (form.storage_district) storage_location += `, ${form.storage_district}`;
+        if (form.storage_state) storage_location += `, ${form.storage_state}`;
+      }
+
+      const payload = {
+        crop_id: form.crop_id,
+        quantity_quintals: form.quantity_quintals,
+        harvest_date: form.harvest_date,
+        storage_location
+      };
+
       if (editingId) {
-        await updateFarmerStock(editingId, form);
+        await updateFarmerStock(editingId, payload);
       } else {
-        await addFarmerStock(form);
+        await addFarmerStock(payload);
       }
       closeModal();
       loadData();
@@ -224,13 +261,44 @@ const FarmerWarehouse = () => {
                 />
               </div>
               <div className="farmer-wh-field">
-                <label>Storage Location</label>
-                <input
-                  type="text"
-                  value={form.storage_location}
-                  onChange={(e) => setForm({ ...form, storage_location: e.target.value })}
-                  placeholder="e.g. Home Godown"
-                />
+                <label>Storage State</label>
+                <select
+                  value={form.storage_state}
+                  onChange={(e) => setForm({ ...form, storage_state: e.target.value, storage_district: "", storage_mandi: "" })}
+                >
+                  <option value="">Select State…</option>
+                  {[...new Set(mandis.map(m => m.state))].filter(Boolean).sort().map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="farmer-wh-field">
+                <label>Storage District</label>
+                <select
+                  value={form.storage_district}
+                  onChange={(e) => setForm({ ...form, storage_district: e.target.value, storage_mandi: "" })}
+                  disabled={!form.storage_state}
+                >
+                  <option value="">Select District…</option>
+                  {[...new Set(mandis.filter(m => m.state === form.storage_state).map(m => m.district))].filter(Boolean).sort().map(d => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="farmer-wh-field">
+                <label>Nearest Mandi</label>
+                <select
+                  value={form.storage_mandi}
+                  onChange={(e) => setForm({ ...form, storage_mandi: e.target.value })}
+                  disabled={!form.storage_district}
+                >
+                  <option value="">Select Mandi…</option>
+                  {mandis.filter(m => m.state === form.storage_state && m.district === form.storage_district).sort((a,b) => a.name.localeCompare(b.name)).map(m => (
+                    <option key={m.id} value={m.name}>{m.name}</option>
+                  ))}
+                </select>
               </div>
               <button type="submit" className="farmer-wh-submit-btn">
                 {editingId ? "Save Changes" : "Add to Warehouse"}

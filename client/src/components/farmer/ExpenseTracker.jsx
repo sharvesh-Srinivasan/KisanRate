@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { getExpenses, addExpense, deleteExpense, getCrops } from "../../api";
 
-const ExpenseTracker = () => {
+const ExpenseTracker = ({ initialCropId }) => {
   const [expenses, setExpenses] = useState([]);
   const [crops, setCrops] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(!!initialCropId);
 
   const [formData, setFormData] = useState({
-    crop_id: "",
+    crop_id: initialCropId || "",
     season: "Kharif 2026",
     fertiliser_cost: "",
     labour_cost: "",
@@ -17,6 +17,13 @@ const ExpenseTracker = () => {
     seed_cost: "",
     expected_yield_quintals: ""
   });
+
+  useEffect(() => {
+    if (initialCropId) {
+      setShowForm(true);
+      setFormData(prev => ({ ...prev, crop_id: initialCropId }));
+    }
+  }, [initialCropId]);
 
   useEffect(() => {
     fetchInitialData();

@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Menu, X, Globe } from "lucide-react";
+import { Menu, X, Globe } from "lucide-react";
 import { useLang, LANGUAGES } from "../i18n";
+import WeatherTimeWidget from "./WeatherTimeWidget";
 
 const WA_ICON = (
   <svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -82,8 +84,9 @@ const Navbar = ({ loading = false, error = null }) => {
           </div>
         </div>
 
-        {/* Right: Language Toggle Only */}
-        <div className="flex items-center">
+        {/* Right: Weather & Language Toggle */}
+        <div className="flex items-center gap-3">
+          <WeatherTimeWidget className="hidden md:flex" />
           <div className="relative" ref={desktopLangRef}>
             <button
               type="button"

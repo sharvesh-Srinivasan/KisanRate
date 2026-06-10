@@ -1,5 +1,6 @@
 const db = require("../config/db");
 const { checkRainForecast } = require("../services/weatherService");
+const { getPrediction } = require("../services/mlService");
 
 const timestamp = () => new Date().toISOString();
 const logWarn = (msg) => process.stderr.write(`[WARN] ${timestamp()} ${msg}\n`);
@@ -279,9 +280,10 @@ const getSellAdvice = async (req, res) => {
     if (mandi_id) {
       [priceQuery] = await db.query(
         `SELECT p.modal_price, p.predicted_price, p.predicted_lower, p.predicted_upper,
-                p.price_date, m.name AS mandi_name
+                p.price_date, m.name AS mandi_name, c.name AS crop_name
          FROM prices p
          JOIN mandis m ON p.mandi_id = m.id
+         JOIN crops c ON p.crop_id = c.id
          WHERE p.crop_id = ? AND p.mandi_id = ?
          ORDER BY p.price_date DESC LIMIT 1`,
         [crop_id, mandi_id]
@@ -290,9 +292,10 @@ const getSellAdvice = async (req, res) => {
       // Best mandi (highest modal price today)
       [priceQuery] = await db.query(
         `SELECT p.modal_price, p.predicted_price, p.predicted_lower, p.predicted_upper,
-                p.price_date, m.name AS mandi_name, m.id AS mandi_id
+                p.price_date, m.name AS mandi_name, m.id AS mandi_id, c.name AS crop_name
          FROM prices p
          JOIN mandis m ON p.mandi_id = m.id
+         JOIN crops c ON p.crop_id = c.id
          WHERE p.crop_id = ?
            AND p.price_date = (SELECT MAX(p2.price_date) FROM prices p2 WHERE p2.crop_id = ?)
          ORDER BY p.modal_price DESC LIMIT 1`,
@@ -322,7 +325,19 @@ const getSellAdvice = async (req, res) => {
     );
 
     const currentPrice = Number(priceRow.modal_price);
-    const predictedPrice = priceRow.predicted_price ? Number(priceRow.predicted_price) : null;
+    let predictedPrice = priceRow.predicted_price ? Number(priceRow.predicted_price) : null;
+    let predictedLower = priceRow.predicted_lower ? Number(priceRow.predicted_lower) : null;
+    let predictedUpper = priceRow.predicted_upper ? Number(priceRow.predicted_upper) : null;
+
+    if (!predictedPrice) {
+      const livePrediction = await getPrediction(priceRow.crop_name, priceRow.mandi_name);
+      if (livePrediction) {
+        predictedPrice = livePrediction.predicted_price;
+        predictedLower = livePrediction.predicted_lower;
+        predictedUpper = livePrediction.predicted_upper;
+      }
+    }
+
     const targetPriceNum = target_price ? Number(target_price) : null;
     const qty = quantity ? Number(quantity) : null;
 
@@ -393,8 +408,8 @@ const getSellAdvice = async (req, res) => {
         recommendation,
         current_price: currentPrice,
         predicted_price: predictedPrice,
-        predicted_lower: priceRow.predicted_lower ? Number(priceRow.predicted_lower) : null,
-        predicted_upper: priceRow.predicted_upper ? Number(priceRow.predicted_upper) : null,
+        predicted_lower: predictedLower,
+        predicted_upper: predictedUpper,
         avg_7day: Math.round(avg7),
         mandi_name: priceRow.mandi_name,
         price_date: priceRow.price_date,

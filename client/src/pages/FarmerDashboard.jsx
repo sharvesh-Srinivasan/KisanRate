@@ -7,6 +7,7 @@ import SellDecisionPanel from "../components/farmer/SellDecisionPanel";
 import PersonalPriceChart from "../components/farmer/PersonalPriceChart";
 import MandiComparisonEngine from "../components/farmer/MandiComparisonEngine";
 import ExpenseTracker from "../components/farmer/ExpenseTracker";
+import WeatherTimeWidget from "../components/WeatherTimeWidget";
 
 // ── Chart colors per crop (cycles through palette) ──────────────────────────
 const CHART_COLORS = [
@@ -48,7 +49,8 @@ const FarmerDashboard = () => {
   const [histories, setHistories] = useState({}); // crop_id → history array
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState("dashboard"); // "dashboard" | "advisor" | "charts" | "sales"
+  const [activeTab, setActiveTab] = useState("dashboard"); // "dashboard" | "advisor" | "charts" | "sales" | "expenses"
+  const [expenseCropId, setExpenseCropId] = useState(null);
 
   // Sell Modal State
   const [sellModalOpen, setSellModalOpen] = useState(false);
@@ -248,6 +250,9 @@ const FarmerDashboard = () => {
 
       {/* ── Main ────────────────────────────────────────────────────────── */}
       <main className="farmer-dash-main">
+        <div className="flex justify-end mb-4 hidden md:flex">
+          <WeatherTimeWidget className="bg-white" />
+        </div>
 
         {/* ── Tab: Dashboard ─────────────────────────────────────────── */}
         {activeTab === "dashboard" && (
@@ -429,12 +434,22 @@ const FarmerDashboard = () => {
                   const matchingExp = expenses.find(e => e.crop_id === sale.crop_id);
                   const costPerQuintal = matchingExp ? matchingExp.cost_per_quintal : null;
                   
-                  let trueProfitMsg = "";
+                  let trueProfitMsg = null;
                   if (costPerQuintal) {
                      const profitMargin = (((actual - costPerQuintal) / costPerQuintal) * 100).toFixed(1);
-                     trueProfitMsg = `Cost: ₹${costPerQuintal}/Q | True Margin: ${profitMargin}%`;
+                     trueProfitMsg = <span style={{ color: costPerQuintal && actual > costPerQuintal ? "#166534" : "#ef4444" }}>Cost: ₹{costPerQuintal}/Q | True Margin: {profitMargin}%</span>;
                   } else {
-                     trueProfitMsg = "Log expenses to see true profit margin.";
+                     trueProfitMsg = (
+                       <button 
+                         onClick={() => {
+                           setExpenseCropId(sale.crop_id);
+                           setActiveTab("expenses");
+                         }}
+                         style={{ background: "none", border: "none", color: "#3B6E2F", textDecoration: "underline", cursor: "pointer", padding: 0, fontSize: "0.8rem", fontWeight: "600" }}
+                       >
+                         Log expenses to see true margin
+                       </button>
+                     );
                   }
 
                   return (
@@ -469,7 +484,7 @@ const FarmerDashboard = () => {
                         )}
                         <div style={{ flex: 2, background: "#f8fafc", padding: "0.75rem", borderRadius: "0.5rem", border: "1px solid #e2e8f0" }}>
                           <div style={{ fontSize: "0.85rem", color: "#475569", fontWeight: "600" }}>Actual Profitability</div>
-                          <div style={{ fontSize: "0.8rem", color: costPerQuintal && actual > costPerQuintal ? "#166534" : "#ef4444" }}>{trueProfitMsg}</div>
+                          <div style={{ fontSize: "0.8rem", marginTop: "2px" }}>{trueProfitMsg}</div>
                         </div>
                       </div>
                     </div>
@@ -482,7 +497,7 @@ const FarmerDashboard = () => {
 
         {/* ── Tab: Expenses ────────────────────────────────────────────── */}
         {activeTab === "expenses" && (
-          <ExpenseTracker />
+          <ExpenseTracker initialCropId={expenseCropId} />
         )}
       </main>
 

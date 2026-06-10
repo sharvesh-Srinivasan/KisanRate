@@ -67,6 +67,11 @@ const getPrices = async (req, res) => {
     );
 
     const today = new Date().toISOString().slice(0, 10);
+    const currentYear = new Date().getFullYear();
+
+    const [mspRows] = await db.query("SELECT crop_id, msp_price FROM msp_rates WHERE effective_year = ?", [currentYear]);
+    const mspMap = {};
+    mspRows.forEach(r => { mspMap[r.crop_id] = r.msp_price; });
 
     const enriched = rows.map((row) => {
       const predictedAt = row.predicted_at
@@ -83,6 +88,7 @@ const getPrices = async (req, res) => {
           row.predicted_lower != null ? Number(row.predicted_lower) : null,
         predicted_upper:
           row.predicted_upper != null ? Number(row.predicted_upper) : null,
+        msp_price: mspMap[row.crop_id] ? Number(mspMap[row.crop_id]) : null,
         prediction_fresh: hasFreshPrediction
       };
     });

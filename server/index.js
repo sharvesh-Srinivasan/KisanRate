@@ -13,6 +13,7 @@ const priceRoutes = require("./routes/priceRoutes");
 const farmerRoutes = require("./routes/farmerRoutes");
 const farmerAuthRoutes = require("./routes/farmerAuthRoutes");
 const farmerStockRoutes = require("./routes/farmerStockRoutes");
+const expenseRoutes = require("./routes/expenseRoutes");
 const alertRoutes = require("./routes/alertRoutes");
 const whatsappRoutes = require("./routes/whatsappRoutes");
 const pushRoutes = require("./routes/pushRoutes");
@@ -148,6 +149,49 @@ const ensureFarmerPortalTables = async () => {
     )`
   );
 
+  // Expense tracking for profit margin
+  await db.query(
+    `CREATE TABLE IF NOT EXISTS farmer_expenses (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      farmer_id INT NOT NULL,
+      crop_id INT NOT NULL,
+      season VARCHAR(50) NOT NULL,
+      fertiliser_cost DECIMAL(10,2) DEFAULT 0,
+      labour_cost DECIMAL(10,2) DEFAULT 0,
+      water_cost DECIMAL(10,2) DEFAULT 0,
+      seed_cost DECIMAL(10,2) DEFAULT 0,
+      expected_yield_quintals DECIMAL(10,2) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (farmer_id) REFERENCES farmers(id) ON DELETE CASCADE,
+      FOREIGN KEY (crop_id) REFERENCES crops(id)
+    )`
+  );
+
+  // Minimum Support Price (MSP) rates
+  await db.query(
+    `CREATE TABLE IF NOT EXISTS msp_rates (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      crop_id INT NOT NULL,
+      msp_price DECIMAL(10,2) NOT NULL,
+      effective_year INT NOT NULL,
+      UNIQUE KEY crop_year (crop_id, effective_year),
+      FOREIGN KEY (crop_id) REFERENCES crops(id)
+    )`
+  );
+
+  try {
+    const currentYear = new Date().getFullYear();
+    await db.query(
+      `INSERT IGNORE INTO msp_rates (crop_id, msp_price, effective_year) VALUES 
+       (1, 1350, ?),
+       (2, 1200, ?),
+       (3, 1100, ?)`,
+      [currentYear, currentYear, currentYear]
+    );
+  } catch (err) {
+    // Ignore seed errors if crops don't exist yet
+  }
+
   // Add district column to farmers if missing
   const [districtCol] = await db.query(
     `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
@@ -258,6 +302,7 @@ app.use("/api/prices", priceRoutes);
 app.use("/api/farmers", farmerRoutes);
 app.use("/api/farmer-auth", farmerAuthRoutes);
 app.use("/api/farmer", farmerStockRoutes);
+app.use("/api/expenses", expenseRoutes);
 app.use("/api/alerts", alertRoutes);
 app.use("/api/whatsapp", whatsappRoutes);
 app.use("/api/push", pushRoutes);

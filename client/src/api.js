@@ -232,3 +232,28 @@ export const getFarmerSalesHistory = async () => {
   });
   return response.data;
 };
+
+export const getCommunityPrices = async (crop_id, mandi_id) => {
+  const response = await apiClient.get("/api/farmer/community-prices", {
+    headers: farmerHeaders(),
+    params: { crop_id, mandi_id }
+  });
+  return response.data;
+};
+
+// ── Expenses ────────────────────────────────────────────────────────────────
+
+export const getExpenses = async () => {
+  const response = await apiClient.get("/api/expenses", { headers: farmerHeaders() });
+  return response.data;
+};
+
+export const addExpense = async (data) => {
+  const response = await apiClient.post("/api/expenses", data, { headers: farmerHeaders() });
+  return response.data;
+};
+
+export const deleteExpense = async (id) => {
+  const response = await apiClient.delete(`/api/expenses/${id}`, { headers: farmerHeaders() });
+  return response.data;
+};

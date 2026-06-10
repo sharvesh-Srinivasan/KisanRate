@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { getFarmerPortfolio, getPriceHistory, getFarmerSalesHistory } from "../api";
+import { getFarmerPortfolio, getPriceHistory, getFarmerSalesHistory, getExpenses } from "../api";
 import PortfolioCard from "../components/farmer/PortfolioCard";
 import SellCropModal from "../components/farmer/SellCropModal";
 import SellDecisionPanel from "../components/farmer/SellDecisionPanel";
 import PersonalPriceChart from "../components/farmer/PersonalPriceChart";
 import MandiComparisonEngine from "../components/farmer/MandiComparisonEngine";
+import ExpenseTracker from "../components/farmer/ExpenseTracker";
 
 // ── Chart colors per crop (cycles through palette) ──────────────────────────
 const CHART_COLORS = [
@@ -43,6 +44,7 @@ const FarmerDashboard = () => {
   const [farmer, setFarmer] = useState(null);
   const [portfolio, setPortfolio] = useState([]);
   const [salesHistory, setSalesHistory] = useState([]);
+  const [expenses, setExpenses] = useState([]);
   const [histories, setHistories] = useState({}); // crop_id → history array
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -69,9 +71,10 @@ const FarmerDashboard = () => {
     try {
       setLoading(true);
       setError("");
-      const [portRes, salesRes] = await Promise.all([
+      const [portRes, salesRes, expRes] = await Promise.all([
         getFarmerPortfolio(),
-        getFarmerSalesHistory().catch(() => ({ success: false, data: [] }))
+        getFarmerSalesHistory().catch(() => ({ success: false, data: [] })),
+        getExpenses().catch(() => ({ success: false, data: [] }))
       ]);
       
       if (portRes.success) {
@@ -82,6 +85,10 @@ const FarmerDashboard = () => {
 
       if (salesRes.success) {
         setSalesHistory(salesRes.data || []);
+      }
+
+      if (expRes.success) {
+        setExpenses(expRes.data || []);
       }
     } catch (err) {
       if (err?.response?.status === 401) {
@@ -203,7 +210,8 @@ const FarmerDashboard = () => {
             { key: "advisor", label: "Sell Advisor", icon: "💡" },
             { key: "mandi-compare", label: "Compare Mandis", icon: "⚖️" },
             { key: "charts", label: "Price Charts", icon: "📈" },
-            { key: "sales", label: "Sales & Profit", icon: "💰" }
+            { key: "sales", label: "Sales & Profit", icon: "💰" },
+            { key: "expenses", label: "Expenses", icon: "🧾" }
           ].map(({ key, label, icon }) => (
             <button
               key={key}
@@ -418,6 +426,17 @@ const FarmerDashboard = () => {
                     isAccurate = Math.abs(diff) <= (predicted * 0.05);
                   }
 
+                  const matchingExp = expenses.find(e => e.crop_id === sale.crop_id);
+                  const costPerQuintal = matchingExp ? matchingExp.cost_per_quintal : null;
+                  
+                  let trueProfitMsg = "";
+                  if (costPerQuintal) {
+                     const profitMargin = (((actual - costPerQuintal) / costPerQuintal) * 100).toFixed(1);
+                     trueProfitMsg = `Cost: ₹${costPerQuintal}/Q | True Margin: ${profitMargin}%`;
+                  } else {
+                     trueProfitMsg = "Log expenses to see true profit margin.";
+                  }
+
                   return (
                     <div key={sale.id} className="portfolio-card" style={{ padding: "1.5rem" }}>
                       <div className="portfolio-card-header">
@@ -433,26 +452,37 @@ const FarmerDashboard = () => {
                         </div>
                       </div>
                       
-                      {predicted > 0 && (
-                        <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid #e2e8f0", display: "flex", gap: "1rem", alignItems: "center" }}>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: "0.75rem", color: "#64748b", textTransform: "uppercase", fontWeight: "700" }}>AI Prediction</div>
-                            <div style={{ fontSize: "0.95rem", fontWeight: "600", color: "#0f172a" }}>₹{predicted}/Q</div>
-                          </div>
-                          <div style={{ flex: 2, background: isAccurate ? "#f0fdf4" : "#f8fafc", padding: "0.75rem", borderRadius: "0.5rem", border: isAccurate ? "1px solid #bbf7d0" : "1px solid #e2e8f0" }}>
-                            <div style={{ fontSize: "0.85rem", color: isAccurate ? "#166534" : "#475569", fontWeight: "600" }}>
-                              {isAccurate ? "🎯 Accurate Prediction" : "📊 Performance"}
+                      <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid #e2e8f0", display: "flex", gap: "1rem", alignItems: "center" }}>
+                        {predicted > 0 && (
+                          <>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: "0.75rem", color: "#64748b", textTransform: "uppercase", fontWeight: "700" }}>AI Prediction</div>
+                              <div style={{ fontSize: "0.95rem", fontWeight: "600", color: "#0f172a" }}>₹{predicted}/Q</div>
                             </div>
-                            <div style={{ fontSize: "0.8rem", color: "#64748b" }}>{profitMsg}</div>
-                          </div>
+                            <div style={{ flex: 2, background: isAccurate ? "#f0fdf4" : "#f8fafc", padding: "0.75rem", borderRadius: "0.5rem", border: isAccurate ? "1px solid #bbf7d0" : "1px solid #e2e8f0" }}>
+                              <div style={{ fontSize: "0.85rem", color: isAccurate ? "#166534" : "#475569", fontWeight: "600" }}>
+                                {isAccurate ? "🎯 Accurate Prediction" : "📊 Performance"}
+                              </div>
+                              <div style={{ fontSize: "0.8rem", color: "#64748b" }}>{profitMsg}</div>
+                            </div>
+                          </>
+                        )}
+                        <div style={{ flex: 2, background: "#f8fafc", padding: "0.75rem", borderRadius: "0.5rem", border: "1px solid #e2e8f0" }}>
+                          <div style={{ fontSize: "0.85rem", color: "#475569", fontWeight: "600" }}>Actual Profitability</div>
+                          <div style={{ fontSize: "0.8rem", color: costPerQuintal && actual > costPerQuintal ? "#166534" : "#ef4444" }}>{trueProfitMsg}</div>
                         </div>
-                      )}
+                      </div>
                     </div>
                   );
                 })}
               </div>
             )}
           </div>
+        )}
+
+        {/* ── Tab: Expenses ────────────────────────────────────────────── */}
+        {activeTab === "expenses" && (
+          <ExpenseTracker />
         )}
       </main>
 

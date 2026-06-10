@@ -1,4 +1,5 @@
 const db = require("../config/db");
+const { checkRainForecast } = require("../services/weatherService");
 
 const timestamp = () => new Date().toISOString();
 const logWarn = (msg) => process.stderr.write(`[WARN] ${timestamp()} ${msg}\n`);
@@ -175,6 +176,11 @@ const getPortfolio = async (req, res) => {
       pricesByCrop[row.crop_id].push(row);
     }
 
+    const currentYear = new Date().getFullYear();
+    const [mspRows] = await db.query("SELECT crop_id, msp_price FROM msp_rates WHERE effective_year = ?", [currentYear]);
+    const mspMap = {};
+    mspRows.forEach(r => { mspMap[r.crop_id] = r.msp_price; });
+
     // 3. For each stock item, enrich with price data
     const portfolio = await Promise.all(
       stock.map(async (item) => {
@@ -217,12 +223,15 @@ const getPortfolio = async (req, res) => {
           }
         }
 
+        const mspPrice = mspMap[item.crop_id] ? Number(mspMap[item.crop_id]) : null;
+
         return {
           ...item,
           current_price: currentPrice,
           predicted_price: predictedPrice,
           harvest_price: harvestPrice,
           price_change_pct: priceChangePct ? Number(priceChangePct) : null,
+          msp_price: mspPrice,
           total_value: totalValue ? Math.round(totalValue) : null,
           wait_vs_sell_profit_diff: waitVsSellProfitDiff,
           optimal_action: optimalAction,
@@ -257,6 +266,7 @@ const getPortfolio = async (req, res) => {
 const getSellAdvice = async (req, res) => {
   try {
     const { crop_id, mandi_id, quantity, target_price } = req.query;
+    const { farmerId } = req.farmer || {};
 
     if (!crop_id) {
       return res.status(400).json({ success: false, data: null, message: "crop_id is required" });
@@ -356,6 +366,23 @@ const getSellAdvice = async (req, res) => {
       }
     }
 
+    // Weather Advisory
+    let isRainExpected = false;
+    let weatherWarning = "";
+    if (farmerId) {
+      const [farmerRows] = await db.query("SELECT district FROM farmers WHERE id = ?", [farmerId]);
+      if (farmerRows.length && farmerRows[0].district) {
+        const district = farmerRows[0].district;
+        const weather = await checkRainForecast(district);
+        if (weather.isRainExpected) {
+          isRainExpected = true;
+          weatherWarning = `🌧️ Heavy rain expected in ${district} for next 3 days. Consider harvesting and selling to avoid spoilage. `;
+          signal = "sell_urgent";
+          recommendation = weatherWarning + " " + recommendation;
+        }
+      }
+    }
+
     const totalValueNow = qty ? Math.round(currentPrice * qty) : null;
     const totalValuePredicted = qty && predictedPrice ? Math.round(predictedPrice * qty) : null;
 
@@ -374,6 +401,8 @@ const getSellAdvice = async (req, res) => {
         wait_days: waitDays,
         total_value_now: totalValueNow,
         total_value_predicted: totalValuePredicted,
+        weather_warning: weatherWarning,
+        is_rain_expected: isRainExpected,
         history: history.map((h) => ({
           date: h.price_date,
           price: Number(h.modal_price)
@@ -454,6 +483,20 @@ const compareMandis = async (req, res) => {
 
     // Return top 10
     const topComparisons = comparisons.slice(0, 10);
+
+    // Fetch community prices for these top mandis
+    for (const comp of topComparisons) {
+      const [cpRows] = await db.query(
+        `SELECT AVG(actual_price) AS avg_community_price, COUNT(id) as report_count
+         FROM farmer_sales
+         WHERE crop_id = ? AND mandi_id = ? AND sold_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)`,
+        [crop_id, comp.mandi_id]
+      );
+      if (cpRows[0] && cpRows[0].report_count > 0) {
+        comp.community_price = Math.round(Number(cpRows[0].avg_community_price));
+        comp.community_reports = cpRows[0].report_count;
+      }
+    }
 
     return res.json({
       success: true,
@@ -562,4 +605,34 @@ const getSalesHistory = async (req, res) => {
   }
 };
 
-module.exports = { listStock, addStock, updateStock, deleteStock, getPortfolio, getSellAdvice, compareMandis, getTransporters, confirmSale, getSalesHistory };
+// ── Community Prices ────────────────────────────────────────────────────────────────
+
+const getCommunityPrices = async (req, res) => {
+  try {
+    const { crop_id, mandi_id } = req.query;
+
+    if (!crop_id || !mandi_id) {
+      return res.status(400).json({ success: false, message: "crop_id and mandi_id are required" });
+    }
+
+    // Get average actual price from farmer_sales for the last 3 days
+    const [rows] = await db.query(
+      `SELECT AVG(actual_price) AS avg_community_price, COUNT(id) as report_count
+       FROM farmer_sales
+       WHERE crop_id = ? AND mandi_id = ? AND sold_date >= DATE_SUB(CURDATE(), INTERVAL 3 DAY)`,
+      [crop_id, mandi_id]
+    );
+
+    const data = rows[0] && rows[0].report_count > 0 ? {
+      avg_community_price: Math.round(Number(rows[0].avg_community_price)),
+      report_count: rows[0].report_count
+    } : null;
+
+    return res.json({ success: true, data, message: "Community prices fetched" });
+  } catch (error) {
+    logWarn(`getCommunityPrices failed: ${error.message}`);
+    return res.status(500).json({ success: false, message: "Failed to fetch community prices" });
+  }
+};
+
+module.exports = { listStock, addStock, updateStock, deleteStock, getPortfolio, getSellAdvice, compareMandis, getTransporters, confirmSale, getSalesHistory, getCommunityPrices };

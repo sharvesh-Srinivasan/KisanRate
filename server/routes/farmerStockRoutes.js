@@ -23,6 +23,7 @@ router.delete("/stock/:id", deleteStock);
 router.get("/portfolio", getPortfolio);
 router.get("/sell-advice", getSellAdvice);
 router.post("/compare-mandis", compareMandis);
+router.get("/community-prices", require("../controllers/farmerStockController").getCommunityPrices);
 
 router.get("/transporters", require("../controllers/farmerStockController").getTransporters);
 router.post("/sell-confirm", require("../controllers/farmerStockController").confirmSale);

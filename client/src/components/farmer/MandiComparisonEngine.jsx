@@ -115,7 +115,14 @@ const MandiComparisonEngine = ({ farmerLocation }) => {
               <div className="mandi-comp-stats">
                 <div className="mandi-comp-stat">
                   <span className="mandi-comp-stat-label">Market Price</span>
-                  <span className="mandi-comp-stat-val">₹{mandi.modal_price}/q</span>
+                  <span className="mandi-comp-stat-val">
+                    ₹{mandi.modal_price}/q
+                  </span>
+                  {mandi.community_price && (
+                    <div style={{ fontSize: '0.75rem', marginTop: '0.25rem', color: mandi.community_price < mandi.modal_price * 0.9 ? '#ef4444' : '#64748b' }}>
+                      Comm: ₹{mandi.community_price} {mandi.community_price < mandi.modal_price * 0.9 ? '⚠️' : ''}
+                    </div>
+                  )}
                 </div>
                 <div className="mandi-comp-stat" style={{ opacity: 0.8 }}>
                   <span className="mandi-comp-stat-label">Est. Transport</span>

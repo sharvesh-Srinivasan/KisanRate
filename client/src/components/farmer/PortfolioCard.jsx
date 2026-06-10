@@ -125,6 +125,15 @@ const PortfolioCard = ({ item, onEdit, onDelete, onSell }) => {
             </span>
           </div>
         )}
+        {item.msp_price && (
+          <div className="portfolio-card-detail">
+            <span className="portfolio-card-detail-label">Govt MSP</span>
+            <span className="portfolio-card-detail-value" style={{ color: current_price < item.msp_price ? '#ef4444' : '#64748b', fontSize: '0.85rem' }}>
+              {formatRs(item.msp_price)}/Q
+              {current_price < item.msp_price && " ⚠️"}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Wait Insight Action Block */}

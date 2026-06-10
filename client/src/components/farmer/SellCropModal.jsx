@@ -157,13 +157,15 @@ const SellCropModal = ({ item, farmerProfile, onClose, onSaleConfirmed }) => {
           <div className="farmer-sell-step">
             {/* AI Recommendation */}
             {advice && (
-              <div className={`farmer-sell-alert ${advice.signal === 'hold' ? 'farmer-sell-alert--wait' : 'farmer-sell-alert--sell'}`} style={{ marginBottom: "1.5rem" }}>
+              <div className={`farmer-sell-alert ${advice.signal === 'hold' ? 'farmer-sell-alert--wait' : advice.signal === 'sell_urgent' ? 'farmer-sell-alert--urgent' : 'farmer-sell-alert--sell'}`} style={{ marginBottom: "1.5rem", border: advice.signal === 'sell_urgent' ? "1px solid #ef4444" : undefined, backgroundColor: advice.signal === 'sell_urgent' ? "#fef2f2" : undefined }}>
                 <div className="farmer-sell-alert-icon">
-                  {advice.signal === 'hold' ? '⏳' : '✅'}
+                  {advice.signal === 'hold' ? '⏳' : advice.signal === 'sell_urgent' ? '🚨' : '✅'}
                 </div>
                 <div>
-                  <h4>{advice.signal === 'hold' ? 'Wait Recommendation' : 'Good to Sell'}</h4>
-                  <p>{advice.recommendation}</p>
+                  <h4 style={{ color: advice.signal === 'sell_urgent' ? '#b91c1c' : undefined }}>
+                    {advice.signal === 'hold' ? 'Wait Recommendation' : advice.signal === 'sell_urgent' ? 'Urgent Action Recommended' : 'Good to Sell'}
+                  </h4>
+                  <p style={{ color: advice.signal === 'sell_urgent' ? '#991b1b' : undefined }}>{advice.recommendation}</p>
                 </div>
               </div>
             )}
@@ -248,6 +250,34 @@ const SellCropModal = ({ item, farmerProfile, onClose, onSaleConfirmed }) => {
                 <div className="logistics-contact">
                   <a href={`https://maps.google.com/?q=${selectedMandi?.mandi_name}+Mandi+${selectedMandi?.district}`} target="_blank" rel="noreferrer" style={{ background: "#3b82f6" }}>
                     🗺️ Directions
+                  </a>
+                </div>
+              </div>
+
+              {/* Dummy Transporter 1 for use case */}
+              <div className="logistics-card">
+                <div className="logistics-icon">🚛</div>
+                <div className="logistics-info">
+                  <div className="logistics-name">Agri Logistics Pro</div>
+                  <div className="logistics-type">Heavy Truck • ₹65/Q</div>
+                </div>
+                <div className="logistics-contact">
+                  <a href="tel:+919876543210">
+                    📞 +91 98765 43210
+                  </a>
+                </div>
+              </div>
+
+              {/* Dummy Transporter 2 for use case */}
+              <div className="logistics-card">
+                <div className="logistics-icon">🛻</div>
+                <div className="logistics-info">
+                  <div className="logistics-name">Quick Farm Transport</div>
+                  <div className="logistics-type">Mini Truck • ₹80/Q</div>
+                </div>
+                <div className="logistics-contact">
+                  <a href="tel:+918765432109">
+                    📞 +91 87654 32109
                   </a>
                 </div>
               </div>

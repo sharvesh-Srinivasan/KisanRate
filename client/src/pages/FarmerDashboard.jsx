@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { getFarmerPortfolio, getPriceHistory, getFarmerSalesHistory, getExpenses } from "../api";
+import { getFarmerPortfolio, getPriceHistory, getFarmerSalesHistory } from "../api";
 import PortfolioCard from "../components/farmer/PortfolioCard";
 import SellCropModal from "../components/farmer/SellCropModal";
 import SellDecisionPanel from "../components/farmer/SellDecisionPanel";
@@ -45,7 +45,6 @@ const FarmerDashboard = () => {
   const [farmer, setFarmer] = useState(null);
   const [portfolio, setPortfolio] = useState([]);
   const [salesHistory, setSalesHistory] = useState([]);
-  const [expenses, setExpenses] = useState([]);
   const [histories, setHistories] = useState({}); // crop_id → history array
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -73,10 +72,9 @@ const FarmerDashboard = () => {
     try {
       setLoading(true);
       setError("");
-      const [portRes, salesRes, expRes] = await Promise.all([
+      const [portRes, salesRes] = await Promise.all([
         getFarmerPortfolio(),
-        getFarmerSalesHistory().catch(() => ({ success: false, data: [] })),
-        getExpenses().catch(() => ({ success: false, data: [] }))
+        getFarmerSalesHistory().catch(() => ({ success: false, data: [] }))
       ]);
       
       if (portRes.success) {
@@ -87,10 +85,6 @@ const FarmerDashboard = () => {
 
       if (salesRes.success) {
         setSalesHistory(salesRes.data || []);
-      }
-
-      if (expRes.success) {
-        setExpenses(expRes.data || []);
       }
     } catch (err) {
       if (err?.response?.status === 401) {
@@ -398,9 +392,9 @@ const FarmerDashboard = () => {
         {/* ── Tab: Sales & Profit ────────────────────────────────────────────── */}
         {activeTab === "sales" && (
           <div className="farmer-dash-section">
-            <h2 className="farmer-dash-section-title">Sales & Profit Tracking</h2>
+            <h2 className="farmer-dash-section-title">💰 Sales & Profit Report</h2>
             <p className="farmer-dash-section-subtitle">
-              Track your past sales and see how our AI predictions compared to the actual price you received.
+              See exactly how much profit you made on each sale — Revenue minus your farming costs = Net Profit.
             </p>
 
             {salesHistory.length === 0 ? (
@@ -409,89 +403,177 @@ const FarmerDashboard = () => {
                 <h3>No sales recorded yet</h3>
                 <p>When you sell crops from your warehouse, the profit metrics will appear here.</p>
               </div>
-            ) : (
-              <div className="farmer-sell-history-list" style={{ display: "flex", flexDirection: "column", gap: "1rem", marginTop: "1rem" }}>
-                {salesHistory.map(sale => {
-                  const actual = Number(sale.actual_price);
-                  const predicted = Number(sale.predicted_price);
-                  let profitMsg = "";
-                  let isAccurate = false;
-                  
-                  if (predicted && predicted > 0) {
-                    const diff = actual - predicted;
-                    if (diff > 0) {
-                      profitMsg = `You made ₹${diff}/Q more than expected!`;
-                    } else if (diff < 0) {
-                      profitMsg = `You made ₹${Math.abs(diff)}/Q less than expected.`;
-                    } else {
-                      profitMsg = `You made exactly the expected amount.`;
-                    }
-                    
-                    // Count as accurate if within 5%
-                    isAccurate = Math.abs(diff) <= (predicted * 0.05);
-                  }
+            ) : (() => {
+              // Summary totals
+              const totalRevenue = salesHistory.reduce((s, x) => s + (x.total_revenue || 0), 0);
+              const salesWithExpenses = salesHistory.filter(x => x.has_expenses);
+              const totalCost = salesWithExpenses.reduce((s, x) => s + (x.total_cost || 0), 0);
+              const totalNetProfit = salesWithExpenses.reduce((s, x) => s + (x.net_profit || 0), 0);
+              const hasAnyExpenses = salesWithExpenses.length > 0;
 
-                  const matchingExp = expenses.find(e => e.crop_id === sale.crop_id);
-                  const costPerQuintal = matchingExp ? matchingExp.cost_per_quintal : null;
-                  
-                  let trueProfitMsg = null;
-                  if (costPerQuintal) {
-                     const profitMargin = (((actual - costPerQuintal) / costPerQuintal) * 100).toFixed(1);
-                     trueProfitMsg = <span style={{ color: costPerQuintal && actual > costPerQuintal ? "#166534" : "#ef4444" }}>Cost: ₹{costPerQuintal}/Q | True Margin: {profitMargin}%</span>;
-                  } else {
-                     trueProfitMsg = (
-                       <button 
-                         onClick={() => {
-                           setExpenseCropId(sale.crop_id);
-                           setActiveTab("expenses");
-                         }}
-                         style={{ background: "none", border: "none", color: "#3B6E2F", textDecoration: "underline", cursor: "pointer", padding: 0, fontSize: "0.8rem", fontWeight: "600" }}
-                       >
-                         Log expenses to see true margin
-                       </button>
-                     );
-                  }
-
-                  return (
-                    <div key={sale.id} className="portfolio-card" style={{ padding: "1.5rem" }}>
-                      <div className="portfolio-card-header">
-                        <div>
-                          <h3 className="portfolio-card-crop-name" style={{ marginBottom: "0.25rem" }}>{sale.crop_name}</h3>
-                          <span style={{ fontSize: "0.85rem", color: "#64748b" }}>
-                            {Number(sale.quantity_quintals)} Quintals sold on {new Date(sale.sold_date).toLocaleDateString("en-IN")}
-                          </span>
-                        </div>
-                        <div style={{ textAlign: "right" }}>
-                          <div style={{ fontSize: "1.1rem", fontWeight: "800", color: "#0f172a" }}>₹{actual}/Q</div>
-                          {sale.mandi_name && <div style={{ fontSize: "0.8rem", color: "#64748b" }}>at {sale.mandi_name}</div>}
-                        </div>
-                      </div>
-                      
-                      <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid #e2e8f0", display: "flex", gap: "1rem", alignItems: "center" }}>
-                        {predicted > 0 && (
-                          <>
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: "0.75rem", color: "#64748b", textTransform: "uppercase", fontWeight: "700" }}>AI Prediction</div>
-                              <div style={{ fontSize: "0.95rem", fontWeight: "600", color: "#0f172a" }}>₹{predicted}/Q</div>
-                            </div>
-                            <div style={{ flex: 2, background: isAccurate ? "#f0fdf4" : "#f8fafc", padding: "0.75rem", borderRadius: "0.5rem", border: isAccurate ? "1px solid #bbf7d0" : "1px solid #e2e8f0" }}>
-                              <div style={{ fontSize: "0.85rem", color: isAccurate ? "#166534" : "#475569", fontWeight: "600" }}>
-                                {isAccurate ? "🎯 Accurate Prediction" : "📊 Performance"}
-                              </div>
-                              <div style={{ fontSize: "0.8rem", color: "#64748b" }}>{profitMsg}</div>
-                            </div>
-                          </>
-                        )}
-                        <div style={{ flex: 2, background: "#f8fafc", padding: "0.75rem", borderRadius: "0.5rem", border: "1px solid #e2e8f0" }}>
-                          <div style={{ fontSize: "0.85rem", color: "#475569", fontWeight: "600" }}>Actual Profitability</div>
-                          <div style={{ fontSize: "0.8rem", marginTop: "2px" }}>{trueProfitMsg}</div>
-                        </div>
-                      </div>
+              return (
+                <>
+                  {/* ── Summary banner ── */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
+                    <div style={{ background: "linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 100%)", borderRadius: "1rem", padding: "1.25rem", color: "white" }}>
+                      <div style={{ fontSize: "0.75rem", opacity: 0.8, textTransform: "uppercase", fontWeight: "700", marginBottom: "0.4rem" }}>Total Revenue</div>
+                      <div style={{ fontSize: "1.5rem", fontWeight: "800" }}>₹{totalRevenue.toLocaleString("en-IN")}</div>
+                      <div style={{ fontSize: "0.75rem", opacity: 0.7, marginTop: "0.2rem" }}>from {salesHistory.length} sale{salesHistory.length > 1 ? "s" : ""}</div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                    {hasAnyExpenses ? (
+                      <>
+                        <div style={{ background: "linear-gradient(135deg, #7f1d1d 0%, #b91c1c 100%)", borderRadius: "1rem", padding: "1.25rem", color: "white" }}>
+                          <div style={{ fontSize: "0.75rem", opacity: 0.8, textTransform: "uppercase", fontWeight: "700", marginBottom: "0.4rem" }}>Total Cost</div>
+                          <div style={{ fontSize: "1.5rem", fontWeight: "800" }}>₹{totalCost.toLocaleString("en-IN")}</div>
+                          <div style={{ fontSize: "0.75rem", opacity: 0.7, marginTop: "0.2rem" }}>seed + fertiliser + labour + water</div>
+                        </div>
+                        <div style={{ background: totalNetProfit >= 0 ? "linear-gradient(135deg, #14532d 0%, #16a34a 100%)" : "linear-gradient(135deg, #7f1d1d 0%, #b91c1c 100%)", borderRadius: "1rem", padding: "1.25rem", color: "white" }}>
+                          <div style={{ fontSize: "0.75rem", opacity: 0.8, textTransform: "uppercase", fontWeight: "700", marginBottom: "0.4rem" }}>Net Profit</div>
+                          <div style={{ fontSize: "1.5rem", fontWeight: "800" }}>{totalNetProfit >= 0 ? "+" : ""}₹{Math.abs(totalNetProfit).toLocaleString("en-IN")}</div>
+                          <div style={{ fontSize: "0.75rem", opacity: 0.7, marginTop: "0.2rem" }}>{totalNetProfit >= 0 ? "🎉 Profitable season!" : "⚠️ Loss — review costs"}</div>
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ background: "#f8fafc", border: "2px dashed #cbd5e1", borderRadius: "1rem", padding: "1.25rem", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gridColumn: "span 2", textAlign: "center" }}>
+                        <div style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>🧾</div>
+                        <div style={{ fontWeight: "700", color: "#0f172a", marginBottom: "0.25rem" }}>No expenses logged yet</div>
+                        <div style={{ fontSize: "0.8rem", color: "#64748b", marginBottom: "0.75rem" }}>Log your farming costs to see Net Profit = Revenue − Cost</div>
+                        <button
+                          onClick={() => setActiveTab("expenses")}
+                          style={{ background: "#16a34a", color: "white", border: "none", borderRadius: "0.5rem", padding: "0.5rem 1rem", fontWeight: "700", cursor: "pointer", fontSize: "0.85rem" }}
+                        >
+                          + Log Expenses Now
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ── Per-sale cards ── */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                    {salesHistory.map(sale => {
+                      const qty = Number(sale.quantity_quintals);
+                      const actual = Number(sale.actual_price);
+                      const predicted = Number(sale.predicted_price);
+                      const revenue = sale.total_revenue || Math.round(qty * actual);
+                      const hasCost = sale.has_expenses;
+                      const cost = sale.total_cost;
+                      const netProfit = sale.net_profit;
+                      const margin = sale.profit_margin_pct;
+                      const isProfit = netProfit >= 0;
+
+                      return (
+                        <div key={sale.id} style={{
+                          background: "white",
+                          borderRadius: "1rem",
+                          border: "1px solid #e2e8f0",
+                          overflow: "hidden",
+                          boxShadow: "0 2px 8px rgba(0,0,0,0.06)"
+                        }}>
+                          {/* Header */}
+                          <div style={{ padding: "1.25rem 1.5rem", display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1px solid #f1f5f9" }}>
+                            <div>
+                              <div style={{ fontSize: "1.1rem", fontWeight: "800", color: "#0f172a" }}>{sale.crop_name}</div>
+                              <div style={{ fontSize: "0.82rem", color: "#64748b", marginTop: "0.2rem" }}>
+                                {qty} Quintals • {new Date(sale.sold_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                                {sale.mandi_name && ` • ${sale.mandi_name}`}
+                              </div>
+                            </div>
+                            <div style={{ textAlign: "right" }}>
+                              <div style={{ fontSize: "0.72rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: "700" }}>Sale Price</div>
+                              <div style={{ fontSize: "1.1rem", fontWeight: "800", color: "#0f172a" }}>₹{actual.toLocaleString("en-IN")}/Q</div>
+                            </div>
+                          </div>
+
+                          {/* Profit breakdown */}
+                          <div style={{ padding: "1rem 1.5rem", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "0.75rem" }}>
+                            {/* Revenue */}
+                            <div style={{ background: "#f0f9ff", borderRadius: "0.625rem", padding: "0.75rem" }}>
+                              <div style={{ fontSize: "0.68rem", color: "#0369a1", textTransform: "uppercase", fontWeight: "700" }}>💵 Revenue</div>
+                              <div style={{ fontSize: "1.05rem", fontWeight: "800", color: "#0c4a6e", marginTop: "0.25rem" }}>₹{revenue.toLocaleString("en-IN")}</div>
+                              <div style={{ fontSize: "0.7rem", color: "#0369a1" }}>{qty}Q × ₹{actual}/Q</div>
+                            </div>
+
+                            {/* Cost */}
+                            <div style={{ background: hasCost ? "#fff7ed" : "#f8fafc", borderRadius: "0.625rem", padding: "0.75rem" }}>
+                              <div style={{ fontSize: "0.68rem", color: hasCost ? "#c2410c" : "#94a3b8", textTransform: "uppercase", fontWeight: "700" }}>🌱 Farming Cost</div>
+                              {hasCost ? (
+                                <>
+                                  <div style={{ fontSize: "1.05rem", fontWeight: "800", color: "#7c2d12", marginTop: "0.25rem" }}>₹{cost.toLocaleString("en-IN")}</div>
+                                  <div style={{ fontSize: "0.7rem", color: "#c2410c" }}>₹{sale.cost_per_quintal}/Q × {qty}Q</div>
+                                </>
+                              ) : (
+                                <>
+                                  <div style={{ fontSize: "0.85rem", fontWeight: "600", color: "#94a3b8", marginTop: "0.25rem" }}>Not logged</div>
+                                  <button onClick={() => { setExpenseCropId(sale.crop_id); setActiveTab("expenses"); }}
+                                    style={{ fontSize: "0.7rem", color: "#16a34a", fontWeight: "700", background: "none", border: "none", padding: 0, cursor: "pointer", textDecoration: "underline" }}>
+                                    Log expenses →
+                                  </button>
+                                </>
+                              )}
+                            </div>
+
+                            {/* Net Profit */}
+                            <div style={{ background: hasCost ? (isProfit ? "#f0fdf4" : "#fef2f2") : "#f8fafc", borderRadius: "0.625rem", padding: "0.75rem" }}>
+                              <div style={{ fontSize: "0.68rem", color: hasCost ? (isProfit ? "#15803d" : "#dc2626") : "#94a3b8", textTransform: "uppercase", fontWeight: "700" }}>
+                                {hasCost ? (isProfit ? "✅ Net Profit" : "❌ Net Loss") : "📊 Net Profit"}
+                              </div>
+                              {hasCost ? (
+                                <>
+                                  <div style={{ fontSize: "1.05rem", fontWeight: "800", color: isProfit ? "#14532d" : "#7f1d1d", marginTop: "0.25rem" }}>
+                                    {isProfit ? "+" : ""}₹{netProfit.toLocaleString("en-IN")}
+                                  </div>
+                                  <div style={{ fontSize: "0.7rem", color: isProfit ? "#15803d" : "#dc2626" }}>
+                                    {margin !== null ? `${margin}% margin` : ""}
+                                  </div>
+                                </>
+                              ) : (
+                                <div style={{ fontSize: "0.85rem", fontWeight: "600", color: "#94a3b8", marginTop: "0.25rem" }}>Add expenses first</div>
+                              )}
+                            </div>
+
+                            {/* AI Prediction accuracy */}
+                            {predicted > 0 && (() => {
+                              const diff = actual - predicted;
+                              const accurate = Math.abs(diff) <= predicted * 0.05;
+                              return (
+                                <div style={{ background: accurate ? "#f0fdf4" : "#f8fafc", borderRadius: "0.625rem", padding: "0.75rem" }}>
+                                  <div style={{ fontSize: "0.68rem", color: accurate ? "#15803d" : "#64748b", textTransform: "uppercase", fontWeight: "700" }}>
+                                    {accurate ? "🎯 AI Accurate" : "📈 AI vs Actual"}
+                                  </div>
+                                  <div style={{ fontSize: "1.05rem", fontWeight: "800", color: diff >= 0 ? "#14532d" : "#7f1d1d", marginTop: "0.25rem" }}>
+                                    {diff >= 0 ? "+" : ""}₹{Math.round(diff)}/Q
+                                  </div>
+                                  <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Predicted ₹{predicted}/Q</div>
+                                </div>
+                              );
+                            })()}
+                          </div>
+
+                          {/* Expense breakdown detail if available */}
+                          {hasCost && sale.expense_breakdown && (
+                            <div style={{ padding: "0.75rem 1.5rem 1rem", background: "#fafafa", borderTop: "1px solid #f1f5f9" }}>
+                              <div style={{ fontSize: "0.7rem", color: "#64748b", fontWeight: "700", textTransform: "uppercase", marginBottom: "0.5rem" }}>Cost Breakdown</div>
+                              <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+                                {[
+                                  { label: "🌱 Seeds", val: sale.expense_breakdown.seed_cost },
+                                  { label: "🧪 Fertiliser", val: sale.expense_breakdown.fertiliser_cost },
+                                  { label: "👷 Labour", val: sale.expense_breakdown.labour_cost },
+                                  { label: "💧 Water", val: sale.expense_breakdown.water_cost },
+                                ].filter(x => x.val > 0).map(({ label, val }) => (
+                                  <div key={label} style={{ fontSize: "0.78rem", color: "#475569" }}>
+                                    <span style={{ fontWeight: "600" }}>{label}</span>: ₹{Number(val).toLocaleString("en-IN")}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              );
+            })()}
           </div>
         )}
 

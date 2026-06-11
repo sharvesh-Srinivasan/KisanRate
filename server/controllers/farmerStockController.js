@@ -603,7 +603,7 @@ const getSalesHistory = async (req, res) => {
     const { farmerId } = req.farmer;
 
     const [rows] = await db.query(
-      `SELECT s.id, s.quantity_quintals, s.actual_price, s.predicted_price, s.sold_date,
+      `SELECT s.id, s.crop_id, s.quantity_quintals, s.actual_price, s.predicted_price, s.sold_date,
               c.name AS crop_name, m.name AS mandi_name
        FROM farmer_sales s
        JOIN crops c ON s.crop_id = c.id
@@ -613,7 +613,58 @@ const getSalesHistory = async (req, res) => {
       [farmerId]
     );
 
-    return res.json({ success: true, data: rows, message: "Sales history fetched" });
+    // Enrich each sale with expense data (most recent expense for that crop by this farmer)
+    const enriched = await Promise.all(rows.map(async (sale) => {
+      const qty = Number(sale.quantity_quintals);
+      const actualPrice = Number(sale.actual_price);
+      const totalRevenue = Math.round(qty * actualPrice);
+
+      // Find the most recent expense entry for this crop
+      const [expRows] = await db.query(
+        `SELECT fertiliser_cost, labour_cost, water_cost, seed_cost, expected_yield_quintals
+         FROM farmer_expenses
+         WHERE farmer_id = ? AND crop_id = ?
+         ORDER BY created_at DESC LIMIT 1`,
+        [farmerId, sale.crop_id]
+      );
+
+      let costPerQuintal = null;
+      let totalCost = null;
+      let netProfit = null;
+      let profitMarginPct = null;
+      let expenseBreakdown = null;
+
+      if (expRows.length > 0) {
+        const exp = expRows[0];
+        const rawTotal = Number(exp.fertiliser_cost) + Number(exp.labour_cost) +
+                         Number(exp.water_cost) + Number(exp.seed_cost);
+        const yieldQ = Number(exp.expected_yield_quintals);
+        costPerQuintal = yieldQ > 0 ? Math.round(rawTotal / yieldQ) : 0;
+        totalCost = Math.round(costPerQuintal * qty);
+        netProfit = totalRevenue - totalCost;
+        profitMarginPct = totalCost > 0 ? (((netProfit) / totalCost) * 100).toFixed(1) : null;
+        expenseBreakdown = {
+          fertiliser_cost: Number(exp.fertiliser_cost),
+          labour_cost: Number(exp.labour_cost),
+          water_cost: Number(exp.water_cost),
+          seed_cost: Number(exp.seed_cost),
+          expected_yield_quintals: yieldQ
+        };
+      }
+
+      return {
+        ...sale,
+        total_revenue: totalRevenue,
+        cost_per_quintal: costPerQuintal,
+        total_cost: totalCost,
+        net_profit: netProfit,
+        profit_margin_pct: profitMarginPct,
+        expense_breakdown: expenseBreakdown,
+        has_expenses: expRows.length > 0
+      };
+    }));
+
+    return res.json({ success: true, data: enriched, message: "Sales history fetched" });
   } catch (error) {
     logWarn(`getSalesHistory failed: ${error.message}`);
     return res.status(500).json({ success: false, message: "Failed to fetch sales history" });

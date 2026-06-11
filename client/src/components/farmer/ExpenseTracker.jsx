@@ -95,8 +95,20 @@ const ExpenseTracker = ({ initialCropId }) => {
 
   return (
     <div className="farmer-dash-panel">
+      {/* ── Info Banner ── */}
+      <div style={{ background: "linear-gradient(135deg, #134e4a 0%, #0d9488 100%)", borderRadius: "0.875rem", padding: "1rem 1.25rem", marginBottom: "1.5rem", color: "white", display: "flex", gap: "1rem", alignItems: "flex-start" }}>
+        <div style={{ fontSize: "2rem", flexShrink: 0 }}>💡</div>
+        <div>
+          <div style={{ fontWeight: "800", fontSize: "0.95rem", marginBottom: "0.25rem" }}>How Expenses Work</div>
+          <div style={{ fontSize: "0.82rem", opacity: 0.9, lineHeight: 1.5 }}>
+            Enter what you spent to grow a crop (seeds, fertiliser, labour, water). We calculate your <strong>cost per quintal</strong>.
+            Then in <strong>Sales & Profit</strong>, we automatically show: <em>Revenue − Cost = Net Profit</em> for each sale.
+          </div>
+        </div>
+      </div>
+
       <div className="farmer-dash-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <h2>Expense Tracker</h2>
+        <h2>🧾 Farming Cost Log</h2>
         <button className="farmer-wh-submit-btn" onClick={() => setShowForm(!showForm)}>
           {showForm ? "Cancel" : "+ Log Expense"}
         </button>
@@ -184,7 +196,10 @@ const ExpenseTracker = ({ initialCropId }) => {
         </div>
       ) : (
         <div className="farmer-dash-empty">
-          <p>You haven't logged any expenses yet.</p>
+          <div className="farmer-dash-empty-icon">🌱</div>
+          <h3>No farming costs logged yet</h3>
+          <p>Click <strong>"+ Log Expense"</strong> above and enter what you spent growing your crop.<br/>
+          This will automatically appear in your <strong>Sales & Profit</strong> report.</p>
         </div>
       )}
     </div>

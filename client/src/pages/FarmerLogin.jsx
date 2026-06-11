@@ -241,7 +241,7 @@ const FarmerLogin = () => {
                 <div>
                   <h1 className="farmer-login-title">Enter Mobile Number</h1>
                   <p className="farmer-login-subtitle">
-                    We'll send a one-time code to your mobile number
+                    We'll send a one-time code to your WhatsApp number
                   </p>
                 </div>
               </div>
@@ -309,14 +309,14 @@ const FarmerLogin = () => {
                 <div>
                   <h1 className="farmer-login-title">Enter OTP</h1>
                   <p className="farmer-login-subtitle">
-                    OTP sent to +91 {phone.slice(0, 2)}••••••{phone.slice(-2)} via SMS
+                    Sent to +91 {phone.slice(0, 2)}••••••{phone.slice(-2)}
                   </p>
                 </div>
               </div>
 
               {devMode && (
                 <div className="farmer-login-devmode-banner">
-                  🛠 Dev Mode: SMS not sent. Check the <strong>server console</strong> for the OTP.
+                  🛠 Portfolio Demo Mode: SMS bypassed. OTP has been auto-filled.
                 </div>
               )}
 

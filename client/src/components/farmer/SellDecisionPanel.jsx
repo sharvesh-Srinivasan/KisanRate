@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getCrops, getMandis, getFarmerSellAdvice } from "../../api";
+import { getCropsWithPrices, getMandisForCrop, getFarmerSellAdvice } from "../../api";
 
 const signals = {
   hold: {
@@ -41,15 +41,37 @@ const SellDecisionPanel = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [loadingMeta, setLoadingMeta] = useState(true);
+  const [loadingMandis, setLoadingMandis] = useState(false);
 
+  // Load only crops that have price data
   useEffect(() => {
-    Promise.all([getCrops(), getMandis()])
-      .then(([c, m]) => {
-        setCrops(c.data || []);
-        setMandis(m.data || []);
+    getCropsWithPrices()
+      .then((res) => {
+        setCrops(res.data || []);
       })
       .finally(() => setLoadingMeta(false));
   }, []);
+
+  // When crop changes, load mandis that have data for that crop
+  useEffect(() => {
+    if (!form.crop_id) {
+      setMandis([]);
+      return;
+    }
+    setLoadingMandis(true);
+    getMandisForCrop(form.crop_id)
+      .then((res) => {
+        setMandis(res.data || []);
+      })
+      .finally(() => setLoadingMandis(false));
+  }, [form.crop_id]);
+
+  const handleCropChange = (e) => {
+    // Reset mandi when crop changes since available mandis will differ
+    setForm((f) => ({ ...f, crop_id: e.target.value, mandi_id: "" }));
+    setAdvice(null);
+    setError("");
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -95,14 +117,14 @@ const SellDecisionPanel = () => {
 
       <form onSubmit={handleSubmit} className="sell-panel-form" noValidate>
         <div className="sell-panel-grid">
-          {/* Crop */}
+          {/* Crop — only shows crops with price data */}
           <div className="sell-panel-field">
             <label className="sell-panel-label" htmlFor="sell-crop">Crop</label>
             <select
               id="sell-crop"
               className="sell-panel-select"
               value={form.crop_id}
-              onChange={(e) => setForm((f) => ({ ...f, crop_id: e.target.value }))}
+              onChange={handleCropChange}
               disabled={loadingMeta}
             >
               <option value="">Select crop…</option>
@@ -112,7 +134,7 @@ const SellDecisionPanel = () => {
             </select>
           </div>
 
-          {/* Mandi (optional) */}
+          {/* Mandi — dynamically filtered for selected crop */}
           <div className="sell-panel-field">
             <label className="sell-panel-label" htmlFor="sell-mandi">
               Mandi <span className="sell-panel-optional">(optional)</span>
@@ -122,9 +144,9 @@ const SellDecisionPanel = () => {
               className="sell-panel-select"
               value={form.mandi_id}
               onChange={(e) => setForm((f) => ({ ...f, mandi_id: e.target.value }))}
-              disabled={loadingMeta}
+              disabled={loadingMandis || !form.crop_id}
             >
-              <option value="">Best available</option>
+              <option value="">{!form.crop_id ? "Select a crop first" : loadingMandis ? "Loading mandis…" : "Best available"}</option>
               {mandis.map((m) => (
                 <option key={m.id} value={m.id}>{m.name} ({m.district})</option>
               ))}

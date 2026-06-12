@@ -275,36 +275,68 @@ const predictTodayForState = async (req, res) => {
       filters
     );
 
-    let updated = 0;
-    const delay = (ms) => new Promise(res => setTimeout(res, ms));
+    if (!rows.length) {
+      return res.json({
+        success: true,
+        data: { updated: 0, total: 0, state, price_date: latestDate || null },
+        message: "No price rows to predict"
+      });
+    }
 
-    for (let i = 0; i < rows.length; i++) {
-      const row = rows[i];
-      const predicted = await getPrediction(row.crop_name, row.mandi_name);
-      
-      if (predicted && typeof predicted.predicted_price === "number") {
-        await db.query(
-          "UPDATE prices SET predicted_price = ?, predicted_lower = ?, predicted_upper = ?, predicted_at = NOW() WHERE id = ?",
-          [
-            predicted.predicted_price,
-            predicted.predicted_lower ?? predicted.predicted_price,
-            predicted.predicted_upper ?? predicted.predicted_price,
-            row.id
-          ]
-        );
-        updated += 1;
+    let updated = 0;
+    let failed = 0;
+    const total = rows.length;
+    const BATCH_SIZE = 5;
+    const OVERALL_TIMEOUT_MS = 180000; // 3 minutes max
+    const startTime = Date.now();
+    let timedOut = false;
+
+    for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+      // Check overall timeout before starting next batch
+      if (Date.now() - startTime > OVERALL_TIMEOUT_MS) {
+        timedOut = true;
+        logWarn(`predictTodayForState timed out after ${Math.round((Date.now() - startTime) / 1000)}s. Processed ${i}/${total} rows (${updated} updated).`);
+        break;
       }
 
-      // Add a small delay between requests to prevent overwhelming the ML service (429 errors)
-      if (i < rows.length - 1) {
-        await delay(1000); 
+      const batch = rows.slice(i, i + BATCH_SIZE);
+      const results = await Promise.allSettled(
+        batch.map(async (row) => {
+          const predicted = await getPrediction(row.crop_name, row.mandi_name);
+          if (predicted && typeof predicted.predicted_price === "number") {
+            await db.query(
+              "UPDATE prices SET predicted_price = ?, predicted_lower = ?, predicted_upper = ?, predicted_at = NOW() WHERE id = ?",
+              [
+                predicted.predicted_price,
+                predicted.predicted_lower ?? predicted.predicted_price,
+                predicted.predicted_upper ?? predicted.predicted_price,
+                row.id
+              ]
+            );
+            return true;
+          }
+          return false;
+        })
+      );
+
+      for (const r of results) {
+        if (r.status === "fulfilled" && r.value) {
+          updated++;
+        } else if (r.status === "rejected") {
+          failed++;
+        }
       }
     }
 
+    const elapsed = Math.round((Date.now() - startTime) / 1000);
+    const message = timedOut
+      ? `Partial: ${updated}/${total} predictions updated in ${elapsed}s (timed out)`
+      : `${updated}/${total} predictions updated in ${elapsed}s`;
+
     return res.json({
       success: true,
-      data: { updated, state, price_date: latestDate || null },
-      message: "Predictions updated"
+      data: { updated, failed, total, state, price_date: latestDate || null, timed_out: timedOut },
+      message
     });
   } catch (error) {
     logWarn(`Predict today failed: ${error.message}`);
@@ -525,6 +557,70 @@ const getPriceReports = async (req, res) => {
   }
 };
 
+// ── Crops that actually have price data ────────────────────────────────────────
+
+const getCropsWithPrices = async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT DISTINCT c.id, c.name, c.name_telugu, c.unit
+       FROM crops c
+       INNER JOIN prices p ON c.id = p.crop_id
+       ORDER BY c.name ASC`
+    );
+
+    return res.json({
+      success: true,
+      data: rows,
+      message: "Crops with price data fetched"
+    });
+  } catch (error) {
+    logWarn(`getCropsWithPrices failed: ${error.message}`);
+    return res.status(500).json({
+      success: false,
+      data: null,
+      message: "Failed to fetch crops"
+    });
+  }
+};
+
+// ── Mandis that have price data for a specific crop ────────────────────────────
+
+const getMandisForCrop = async (req, res) => {
+  try {
+    const { crop_id } = req.query;
+
+    if (!crop_id) {
+      return res.status(400).json({
+        success: false,
+        data: null,
+        message: "crop_id is required"
+      });
+    }
+
+    const [rows] = await db.query(
+      `SELECT DISTINCT m.id, m.name, m.district, m.state
+       FROM mandis m
+       INNER JOIN prices p ON m.id = p.mandi_id
+       WHERE p.crop_id = ?
+       ORDER BY m.name ASC`,
+      [crop_id]
+    );
+
+    return res.json({
+      success: true,
+      data: rows,
+      message: "Mandis for crop fetched"
+    });
+  } catch (error) {
+    logWarn(`getMandisForCrop failed: ${error.message}`);
+    return res.status(500).json({
+      success: false,
+      data: null,
+      message: "Failed to fetch mandis"
+    });
+  }
+};
+
 module.exports = {
   getPrices,
   getPriceHistory,
@@ -536,5 +632,7 @@ module.exports = {
   clearStalePredictions,
   getAnalytics,
   reportPrice,
-  getPriceReports
+  getPriceReports,
+  getCropsWithPrices,
+  getMandisForCrop
 };

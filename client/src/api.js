@@ -39,6 +39,18 @@ export const getMandis = async () => {
   return response.data;
 };
 
+export const getCropsWithPrices = async () => {
+  const response = await apiClient.get("/api/prices/crops-with-prices");
+  return response.data;
+};
+
+export const getMandisForCrop = async (cropId) => {
+  const response = await apiClient.get("/api/prices/mandis-for-crop", {
+    params: { crop_id: cropId }
+  });
+  return response.data;
+};
+
 export const getPriceHistory = async (cropId, mandiId) => {
   const response = await apiClient.get(
     `/api/prices/history/${cropId}/${mandiId}`
@@ -90,8 +102,17 @@ export const refreshPredictions = async () => {
 };
 
 export const predictTodayForState = async (state) => {
-  const response = await apiClient.post("/api/prices/predict-now", { state });
-  return response.data;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 210000); // 3.5 min client timeout
+  try {
+    const response = await apiClient.post("/api/prices/predict-now", { state }, {
+      signal: controller.signal,
+      timeout: 210000
+    });
+    return response.data;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 };
 
 export const subscribeWhatsapp = async (payload) => {

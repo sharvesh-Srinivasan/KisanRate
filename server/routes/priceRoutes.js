@@ -10,7 +10,9 @@ const {
   clearStalePredictions,
   getAnalytics,
   reportPrice,
-  getPriceReports
+  getPriceReports,
+  getCropsWithPrices,
+  getMandisForCrop
 } = require("../controllers/priceController");
 const { authenticate } = require("../middleware/authMiddleware");
 
@@ -20,6 +22,8 @@ router.get("/", getPrices);
 router.get("/history/:cropId/:mandiId", getPriceHistory);
 router.get("/crops", getCrops);
 router.get("/mandis", getMandis);
+router.get("/crops-with-prices", getCropsWithPrices);
+router.get("/mandis-for-crop", getMandisForCrop);
 router.post("/manual", authenticate, manualPriceAdd);
 router.post("/refresh-predictions", authenticate, refreshPredictions);
 router.post("/predict-now", predictTodayForState);

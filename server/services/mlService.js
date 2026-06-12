@@ -28,11 +28,11 @@ const getPrediction = async (cropName, mandiName) => {
       axios.post(
         `${serviceUrl}/predict`,
         { crop: cropName, mandi: mandiName },
-        { timeout: 90000 }
+        { timeout: 30000 }
       );
 
-    // Retry delays in ms: first retry after 60s (Render cold-start), second after 15s, third after 20s
-    const retryDelays = [60000, 15000, 20000];
+    // Retry delays in ms: reduced to avoid long hangs on cold-start
+    const retryDelays = [10000, 5000, 5000];
     let lastError;
 
     for (let attempt = 0; attempt <= retryDelays.length; attempt++) {
@@ -59,6 +59,7 @@ const getPrediction = async (cropName, mandiName) => {
         const status = error?.response?.status;
         const code = error?.code;
         const isRetryable =
+          status === 429 ||
           status === 502 ||
           status === 503 ||
           status === 504 ||

@@ -223,15 +223,23 @@ const Home = ({ loading = false, error = null }) => {
       setPredictionStatus(t("select_crop_hint"));
       return;
     }
-    setPredictionStatus("");
+    setPredictionStatus("Starting predictions — this may take 1–3 minutes…");
     setPredictionLoading(true);
     try {
       const response = await predictTodayForState(filters.state);
-      const updated = response?.data?.updated ?? 0;
-      setPredictionStatus(`Predictions updated for ${updated} rows.`);
+      const { updated, total, timed_out: timedOut } = response?.data ?? {};
+      if (timedOut) {
+        setPredictionStatus(`⚠️ Partial: ${updated ?? 0}/${total ?? "?"} predictions updated (ML service timed out). Try again for remaining.`);
+      } else {
+        setPredictionStatus(`✅ ${updated ?? 0}/${total ?? "?"} predictions updated successfully.`);
+      }
       await fetchPrices(true);
     } catch (err) {
-      setPredictionStatus("Failed to run predictions.");
+      if (err?.code === "ERR_CANCELED" || err?.name === "AbortError" || err?.message?.includes("aborted")) {
+        setPredictionStatus("⏱️ Prediction timed out — ML service may be starting up. Try again in a minute.");
+      } else {
+        setPredictionStatus("❌ Failed to run predictions. ML service may be down.");
+      }
     } finally {
       setPredictionLoading(false);
     }
